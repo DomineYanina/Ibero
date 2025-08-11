@@ -29,6 +29,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.ui.semantics.text
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModelProvider
@@ -220,14 +221,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Listener para el botón de forzar sincronización
+        // Listener para el botón de forzar sincronización
         btnForceSync.setOnClickListener {
-            // Iniciar la sincronización manualmente
-            if (isNetworkAvailable()) {
-                Toast.makeText(this, "Iniciando sincronización manual...", Toast.LENGTH_SHORT).show()
-                viewModel.syncUnsyncedInspections()
-            } else {
-                Toast.makeText(this, "No hay conexión a internet para sincronizar.", Toast.LENGTH_SHORT).show()
-            }
+            // La función requestManualSync() dentro del ViewModel ya se encarga
+            // de verificar la red y si ya hay una sincronización en curso.
+            // También actualiza el LiveData _syncMessage con el estado.
+            viewModel.requestManualSync() // <--- LÍNEA CORREGIDA
         }
 
         // Validaciones en tiempo real para campos obligatorios
@@ -257,12 +256,15 @@ class MainActivity : AppCompatActivity() {
     private fun observeViewModel() {
         // Observar el número de inspecciones no sincronizadas
         viewModel.unsyncedCount.observe(this) { count ->
-            val networkStatus = if (isNetworkAvailable()) "Online" else "Offline"
-            textSyncStatus.text = "Estado: $networkStatus | Pendientes: $count"
-            // Si hay conexión y pendientes, iniciar sincronización automática
-            if (isNetworkAvailable() && count > 0) {
-                viewModel.syncUnsyncedInspections()
-            }
+            // Actualizar el estado de la red en el ViewModel.
+            // El ViewModel internamente decidirá si debe auto-sincronizar.
+            val currentNetworkStatus = isNetworkAvailable()
+            viewModel.updateNetworkStatus(currentNetworkStatus) // Informar al ViewModel del estado actual
+
+            val networkStatusText = if (currentNetworkStatus) "Online" else "Offline"
+            textSyncStatus.text = "Estado: $networkStatusText | Pendientes: $count"
+            // La lógica de auto-sincronización ahora reside completamente dentro del ViewModel
+            // y se activa por los observadores internos del ViewModel (unsyncedInspections y isNetworkAvailable).
         }
 
         // Observar el historial de inspecciones para actualizar el RecyclerView
@@ -278,6 +280,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
 
     private fun setupHistoryRecyclerView() {
         historyAdapter = InspectionHistoryAdapter { inspection ->
