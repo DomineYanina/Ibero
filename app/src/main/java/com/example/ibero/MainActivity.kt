@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
@@ -16,7 +15,6 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.LayoutInflater
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
@@ -29,7 +27,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.ui.semantics.text
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModelProvider
@@ -42,9 +39,7 @@ import com.google.android.material.textfield.TextInputLayout
 import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.Inspection
 import com.example.ibero.repository.InspectionRepository
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -55,10 +50,8 @@ import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
 
-    // ViewModel para manejar la lógica de datos y el ciclo de vida
     private lateinit var viewModel: InspectionViewModel
 
-    // Vistas de la interfaz de usuario
     private lateinit var editInspectionDate: EditText
     private lateinit var editInspectionTime: EditText
     private lateinit var editInspectorName: EditText
@@ -68,12 +61,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var editColor: EditText
     private lateinit var editTotalLotQuantity: EditText
     private lateinit var editSampleQuantity: EditText
-    private lateinit var spinnerDefectType: AutoCompleteTextView // Usamos AutoCompleteTextView para spinner de Material Design
+    private lateinit var spinnerDefectType: AutoCompleteTextView
     private lateinit var layoutOtherDefect: TextInputLayout
     private lateinit var editOtherDefectDescription: EditText
     private lateinit var editDefectiveItemsQuantity: EditText
     private lateinit var editDefectDescription: EditText
-    private lateinit var spinnerActionTaken: AutoCompleteTextView // Usamos AutoCompleteTextView
+    private lateinit var spinnerActionTaken: AutoCompleteTextView
     private lateinit var btnCaptureImage: MaterialButton
     private lateinit var imagePreviewContainer: LinearLayout
     private lateinit var btnSaveInspection: MaterialButton
@@ -82,14 +75,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnForceSync: MaterialButton
     private lateinit var recyclerViewHistory: RecyclerView
 
-    // Adaptador para el historial de inspecciones
     private lateinit var historyAdapter: InspectionHistoryAdapter
 
-    // Lista para almacenar las rutas de las imágenes capturadas temporalmente
     private val capturedImagePaths = mutableListOf<String>()
-    private var currentPhotoPath: String? = null // Ruta de la foto actual que se está capturando
+    private var currentPhotoPath: String? = null
 
-    // Launcher para la cámara
     private val takePictureLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             currentPhotoPath?.let { path ->
@@ -97,15 +87,13 @@ class MainActivity : AppCompatActivity() {
                 displayImagePreview(path)
             }
         } else {
-            // Si la captura de imagen fue cancelada o falló, borra el archivo temporal
             currentPhotoPath?.let { path ->
                 File(path).delete()
             }
         }
-        currentPhotoPath = null // Resetea la ruta de la foto actual
+        currentPhotoPath = null
     }
 
-    // Launcher para permisos de cámara
     private val requestCameraPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
         if (isGranted) {
             dispatchTakePictureIntent()
@@ -120,28 +108,21 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Inicializar vistas
         initViews()
 
-        // Configurar ViewModel
         val database = AppDatabase.getDatabase(applicationContext)
         val repository = InspectionRepository(database.inspectionDao())
         val factory = InspectionViewModelFactory(repository)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
-        // Configurar adaptadores para Spinners (AutoCompleteTextView)
         setupSpinners()
 
-        // Configurar listeners de eventos
         setupListeners()
 
-        // Observar datos del ViewModel
         observeViewModel()
 
-        // Inicializar el historial de inspecciones
         setupHistoryRecyclerView()
 
-        // Autocompletar fecha y hora actuales
         setCurrentDateTime()
     }
 
@@ -171,7 +152,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupSpinners() {
-        // Tipos de Defecto
         val defectTypes = arrayOf("Mancha", "Hebra Suelta", "Descosido", "Error de Talla", "Error de Color", "Otro")
         val defectAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, defectTypes)
         spinnerDefectType.setAdapter(defectAdapter)
@@ -182,11 +162,10 @@ class MainActivity : AppCompatActivity() {
                 layoutOtherDefect.visibility = View.VISIBLE
             } else {
                 layoutOtherDefect.visibility = View.GONE
-                editOtherDefectDescription.setText("") // Limpiar el campo si no es "Otro"
+                editOtherDefectDescription.setText("")
             }
         }
 
-        // Acciones Tomadas
         val actionTakenOptions = arrayOf("Aprobado", "Rechazado", "Aprobado con Observaciones", "Reproceso")
         val actionAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, actionTakenOptions)
         spinnerActionTaken.setAdapter(actionAdapter)
@@ -195,41 +174,30 @@ class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.M)
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     private fun setupListeners() {
-        // Listener para la fecha de inspección
         editInspectionDate.setOnClickListener {
             showDatePickerDialog()
         }
 
-        // Listener para la hora de inspección
         editInspectionTime.setOnClickListener {
             showTimePickerDialog()
         }
 
-        // Listener para el botón de capturar imagen
         btnCaptureImage.setOnClickListener {
             checkCameraPermissionAndTakePicture()
         }
 
-        // Listener para el botón de guardar inspección
         btnSaveInspection.setOnClickListener {
             saveInspection()
         }
 
-        // Listener para el botón de limpiar formulario
         btnClearForm.setOnClickListener {
             clearForm()
         }
 
-        // Listener para el botón de forzar sincronización
-        // Listener para el botón de forzar sincronización
         btnForceSync.setOnClickListener {
-            // La función requestManualSync() dentro del ViewModel ya se encarga
-            // de verificar la red y si ya hay una sincronización en curso.
-            // También actualiza el LiveData _syncMessage con el estado.
-            viewModel.requestManualSync() // <--- LÍNEA CORREGIDA
+            viewModel.requestManualSync()
         }
 
-        // Validaciones en tiempo real para campos obligatorios
         addRequiredFieldValidation(editArticleReference, "Referencia del Artículo es obligatoria")
         addRequiredFieldValidation(editSampleQuantity, "Cantidad de Muestra es obligatoria")
         addRequiredFieldValidation(spinnerDefectType, "Tipo de Defecto es obligatorio")
@@ -254,29 +222,23 @@ class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.M)
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     private fun observeViewModel() {
-        // Observar el número de inspecciones no sincronizadas
+
         viewModel.unsyncedCount.observe(this) { count ->
-            // Actualizar el estado de la red en el ViewModel.
-            // El ViewModel internamente decidirá si debe auto-sincronizar.
             val currentNetworkStatus = isNetworkAvailable()
-            viewModel.updateNetworkStatus(currentNetworkStatus) // Informar al ViewModel del estado actual
+            viewModel.updateNetworkStatus(currentNetworkStatus)
 
             val networkStatusText = if (currentNetworkStatus) "Online" else "Offline"
             textSyncStatus.text = "Estado: $networkStatusText | Pendientes: $count"
-            // La lógica de auto-sincronización ahora reside completamente dentro del ViewModel
-            // y se activa por los observadores internos del ViewModel (unsyncedInspections y isNetworkAvailable).
         }
 
-        // Observar el historial de inspecciones para actualizar el RecyclerView
         viewModel.allInspections.observe(this) { inspections ->
             historyAdapter.submitList(inspections)
         }
 
-        // Observar mensajes de éxito/error de sincronización
         viewModel.syncMessage.observe(this) { message ->
             message?.let {
                 Toast.makeText(this, it, Toast.LENGTH_LONG).show()
-                viewModel.clearSyncMessage() // Limpiar el mensaje después de mostrarlo
+                viewModel.clearSyncMessage()
             }
         }
     }
@@ -284,8 +246,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupHistoryRecyclerView() {
         historyAdapter = InspectionHistoryAdapter { inspection ->
-            // Aquí puedes implementar la lógica para ver detalles de la inspección
-            // Por ahora, solo un Toast
+
             Toast.makeText(this, "Detalles de: ${inspection.articleReference}", Toast.LENGTH_SHORT).show()
         }
         recyclerViewHistory.layoutManager = LinearLayoutManager(this)
@@ -323,7 +284,7 @@ class MainActivity : AppCompatActivity() {
         val timePickerDialog = TimePickerDialog(this, { _, selectedHour, selectedMinute ->
             val selectedTime = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute)
             editInspectionTime.setText(selectedTime)
-        }, hour, minute, true) // true para formato de 24 horas
+        }, hour, minute, true)
         timePickerDialog.show()
     }
 
@@ -337,32 +298,32 @@ class MainActivity : AppCompatActivity() {
 
     @Throws(IOException::class)
     private fun createImageFile(): File {
-        // Crea un nombre de archivo de imagen único
+
         val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         return File.createTempFile(
-            "JPEG_${timeStamp}_", /* prefijo */
-            ".jpg", /* sufijo */
-            storageDir /* directorio */
+            "JPEG_${timeStamp}_",
+            ".jpg",
+            storageDir
         ).apply {
-            // Guarda un archivo: ruta para usar con ACTION_VIEW intents
+
             currentPhotoPath = absolutePath
         }
     }
 
     private fun dispatchTakePictureIntent() {
         Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
-            // Asegúrate de que haya una actividad de cámara para manejar el intent
+
             takePictureIntent.resolveActivity(packageManager)?.also {
-                // Crea el archivo donde debería ir la foto
+
                 val photoFile: File? = try {
                     createImageFile()
                 } catch (ex: IOException) {
-                    // Error al crear el archivo
+
                     Toast.makeText(this, "Error al crear archivo de imagen: ${ex.message}", Toast.LENGTH_LONG).show()
                     null
                 }
-                // Continúa solo si el archivo fue creado exitosamente
+
                 photoFile?.also {
                     val photoURI: Uri = FileProvider.getUriForFile(
                         this,
@@ -390,7 +351,6 @@ class MainActivity : AppCompatActivity() {
             setBackgroundResource(R.drawable.rounded_image_background) // Fondo redondeado para la imagen
         }
 
-        // Cargar imagen usando Glide
         Glide.with(this)
             .load(imagePath)
             .centerCrop()
@@ -401,7 +361,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveInspection() {
-        // Validaciones de campos obligatorios
         if (!validateForm()) {
             Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_LONG).show()
             return
@@ -422,11 +381,9 @@ class MainActivity : AppCompatActivity() {
         val defectDescription = editDefectDescription.text.toString().trim()
         val actionTaken = spinnerActionTaken.text.toString().trim()
 
-        // Convertir fecha a Date
         val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         val inspectionDate = dateFormat.parse(inspectionDateStr) ?: Date()
 
-        // Generar un ID único para el registro (para evitar duplicados en Google Sheets)
         val uniqueId = UUID.randomUUID().toString()
 
         val newInspection = Inspection(
@@ -444,23 +401,22 @@ class MainActivity : AppCompatActivity() {
             defectiveItemsQuantity = defectiveItemsQuantity,
             defectDescription = defectDescription,
             actionTaken = actionTaken,
-            imagePaths = capturedImagePaths.toList(), // Copia la lista de rutas locales
-            imageUrls = emptyList(), // Inicialmente vacío, se llenará después de la sincronización
-            isSynced = false, // No sincronizado al guardar por primera vez
+            imagePaths = capturedImagePaths.toList(),
+            imageUrls = emptyList(),
+            isSynced = false,
             uniqueId = uniqueId
         )
 
         lifecycleScope.launch {
             viewModel.insertInspection(newInspection)
             Toast.makeText(this@MainActivity, "Inspección guardada localmente.", Toast.LENGTH_SHORT).show()
-            clearForm() // Limpiar formulario después de guardar
+            clearForm()
         }
     }
 
     private fun validateForm(): Boolean {
         var isValid = true
 
-        // Validar campos de texto
         val requiredEditTexts = listOf(
             editArticleReference,
             editSampleQuantity,
@@ -475,7 +431,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Validar Spinners (AutoCompleteTextView)
         val requiredSpinners = listOf(
             spinnerDefectType,
             spinnerActionTaken
@@ -489,7 +444,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Validar "Otro Defecto" si aplica
         if (spinnerDefectType.text.toString() == "Otro" && editOtherDefectDescription.text.isNullOrBlank()) {
             editOtherDefectDescription.error = "Especificar otro defecto es obligatorio"
             isValid = false
@@ -517,15 +471,12 @@ class MainActivity : AppCompatActivity() {
         editDefectDescription.setText("")
         spinnerActionTaken.setText("", false) // Limpiar texto y no seleccionar nada
 
-        // Limpiar previsualizaciones de imágenes y la lista de rutas
         imagePreviewContainer.removeAllViews()
         imagePreviewContainer.visibility = View.GONE
         capturedImagePaths.clear()
 
-        // Restablecer fecha y hora actuales
         setCurrentDateTime()
 
-        // Limpiar errores de validación
         val allEditTexts = listOf(
             editInspectionDate, editInspectionTime, editInspectorName, editOrderNumber,
             editArticleReference, editSupplier, editColor, editTotalLotQuantity,
@@ -538,7 +489,6 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Formulario limpiado.", Toast.LENGTH_SHORT).show()
     }
 
-    // Comprueba si hay conexión a internet
     @RequiresApi(Build.VERSION_CODES.M)
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     private fun isNetworkAvailable(): Boolean {
@@ -550,15 +500,10 @@ class MainActivity : AppCompatActivity() {
                 capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
     }
 
-    // TODO: Implementar un BroadcastReceiver para detectar cambios en la conectividad
-    // y llamar a viewModel.syncUnsyncedInspections() cuando la conexión se restablezca.
-    // Esto es más avanzado y se puede añadir después de la funcionalidad básica.
-
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onResume() {
         super.onResume()
-        // Actualizar el estado de la red cuando la actividad se reanuda
         viewModel.updateNetworkStatus(isNetworkAvailable())
     }
 }
