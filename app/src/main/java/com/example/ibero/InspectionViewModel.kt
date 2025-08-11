@@ -22,7 +22,6 @@ import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
 import java.io.File
-import java.util.Date
 import java.text.SimpleDateFormat
 import java.util.Locale
 import okhttp3.RequestBody.Companion.asRequestBody // ¡Añade esta línea!
@@ -81,9 +80,7 @@ class InspectionViewModel(private val repository: InspectionRepository) : ViewMo
     private val _syncMessage = MutableLiveData<String?>()
     val syncMessage: LiveData<String?> = _syncMessage
 
-    // Instancia del servicio de Google Apps Script (inicializar con tu URL)
-    // REEMPLAZA ESTA URL CON LA URL DE DESPLIEGUE DE TU GOOGLE APPS SCRIPT WEB APP
-    private val GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxd5xeOKNkdNjycH-RlgvW3KdzF8yBy7kmfq8jk9GJO9UhjXWIAY4poCU3RnR9TcMU/exec/" // <-- ¡IMPORTANTE!
+    private val GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyUcLe6tu_U0ZjK9F_qu6CnSsXNyZB3C89OjTD5gLXu5h5XxOSZRLzwZqpj-QLGJWPUxA/exec/"
 
     private val googleAppsScriptService: GoogleAppsScriptService by lazy {
         Retrofit.Builder()
