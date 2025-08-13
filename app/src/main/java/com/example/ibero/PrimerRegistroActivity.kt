@@ -78,12 +78,17 @@ class PrimerRegistroActivity : AppCompatActivity() {
         btnNext.setOnClickListener {
             if (validateForm()) {
                 val intent = Intent(this, SegundoRegistroActivity::class.java)
+
+                // Obtener valores y manejar conversiones de forma segura
+                val telarValue = spinnerTelar.text.toString().toIntOrNull() ?: 0
+                val tintoreriaValue = editTintoreria.text.toString().toIntOrNull() ?: 0
+
                 intent.putExtra("LOGGED_IN_USER", loggedInUser)
                 intent.putExtra("FECHA", editFecha.text.toString())
                 intent.putExtra("HOJA_DE_RUTA", formatHojaDeRuta(editHojaDeRuta.text.toString()))
                 intent.putExtra("TEJEDURIA", spinnerTejeduria.text.toString())
-                intent.putExtra("TELAR", spinnerTelar.text.toString().toInt())
-                intent.putExtra("TINTORERIA", editTintoreria.text.toString().toInt())
+                intent.putExtra("TELAR", telarValue)
+                intent.putExtra("TINTORERIA", tintoreriaValue)
                 intent.putExtra("ARTICULO", spinnerArticulo.text.toString())
                 startActivity(intent)
             } else {

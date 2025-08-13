@@ -1,13 +1,13 @@
 package com.example.ibero
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
-import com.example.ibero.R
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -42,34 +42,51 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_segundo_registro)
+        try {
+            setContentView(R.layout.activity_segundo_registro)
 
-        // Inicializar ViewModel
-        val database = AppDatabase.getDatabase(applicationContext)
-        val repository = InspectionRepository(database.inspectionDao())
-        val factory = InspectionViewModelFactory(repository)
-        viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
+            Log.d("SegundoRegistro", "Activity started, setContentView successful.")
 
-        // Obtener datos de la actividad anterior
-        usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
-        fecha = intent.getStringExtra("FECHA") ?: ""
-        hojaDeRuta = intent.getStringExtra("HOJA_DE_RUTA") ?: ""
-        tejeduria = intent.getStringExtra("TEJEDURIA") ?: ""
-        telar = intent.getIntExtra("TELAR", 0)
-        tintoreria = intent.getIntExtra("TINTORERIA", 0)
-        articulo = intent.getStringExtra("ARTICULO") ?: ""
+            // Inicializar ViewModel
+            val database = AppDatabase.getDatabase(applicationContext)
+            val repository = InspectionRepository(database.inspectionDao())
+            val factory = InspectionViewModelFactory(repository)
+            viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
-        initViews()
-        setupSpinners()
-        setupListeners()
+            // Obtener datos de la actividad anterior
+            usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
+            fecha = intent.getStringExtra("FECHA") ?: ""
+            hojaDeRuta = intent.getStringExtra("HOJA_DE_RUTA") ?: ""
+            tejeduria = intent.getStringExtra("TEJEDURIA") ?: ""
+            telar = intent.getIntExtra("TELAR", 0)
+            tintoreria = intent.getIntExtra("TINTORERIA", 0)
+            articulo = intent.getStringExtra("ARTICULO") ?: ""
+
+            Log.d("SegundoRegistro", "Datos de Intent recibidos. Telar: $telar, Tintoreria: $tintoreria")
+
+            initViews()
+            setupSpinners()
+            setupListeners()
+
+        } catch (e: Exception) {
+            val errorMessage = "Error en onCreate: ${e.message}"
+            Log.e("SegundoRegistro", errorMessage, e)
+            Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun initViews() {
-        spinnerTipoCalidad = findViewById(R.id.spinner_tipo_calidad)
-        layoutTipoDeFalla = findViewById(R.id.layout_tipo_de_falla)
-        spinnerTipoDeFalla = findViewById(R.id.spinner_tipo_de_falla)
-        editAnchoDeRollo = findViewById(R.id.edit_ancho_de_rollo)
-        btnSave = findViewById(R.id.btn_save)
+        try {
+            spinnerTipoCalidad = findViewById(R.id.spinner_tipo_calidad)
+            layoutTipoDeFalla = findViewById(R.id.layout_tipo_de_falla)
+            spinnerTipoDeFalla = findViewById(R.id.spinner_tipo_de_falla)
+            editAnchoDeRollo = findViewById(R.id.edit_ancho_de_rollo)
+            btnSave = findViewById(R.id.btn_save)
+        } catch (e: Exception) {
+            val errorMessage = "Error al inicializar vistas: ${e.message}"
+            Log.e("SegundoRegistro", errorMessage, e)
+            Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun setupSpinners() {
