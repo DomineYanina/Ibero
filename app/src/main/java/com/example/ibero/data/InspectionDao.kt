@@ -19,7 +19,7 @@ interface InspectionDao {
 
     // Obtiene todas las inspecciones de la base de datos
     // Flow permite observar cambios en tiempo real en la base de datos
-    @Query("SELECT * FROM inspections ORDER BY inspectionDate DESC, inspectionTime DESC")
+    @Query("SELECT * FROM inspections ORDER BY fecha DESC, hojaDeRuta DESC")
     fun getAllInspections(): Flow<List<Inspection>>
 
     // Obtiene todas las inspecciones que no han sido sincronizadas

@@ -5,30 +5,27 @@ import androidx.room.PrimaryKey
 import java.util.Date
 
 @Entity(tableName = "inspections")
-data class Inspection( // <--- ¡AQUÍ ES DONDE VAN LAS PROPIEDADES!
-    @PrimaryKey(autoGenerate = true) // Genera automáticamente un ID único para cada inspección
-    val id: Long = 0, // ID único de la inspección en la base de datos local
+data class Inspection(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
 
-    val inspectionDate: Date, // Fecha de la inspección
-    val inspectionTime: String, // Hora de la inspección (formato HH:mm)
-    val inspectorName: String, // Nombre del inspector/usuario
-    val orderNumber: String, // Número de pedido/lote
-    val articleReference: String, // Referencia del artículo/producto
-    val supplier: String, // Proveedor
-    val color: String, // Color del producto
-    val totalLotQuantity: Int, // Cantidad total del lote inspeccionado
-    val sampleQuantity: Int, // Cantidad de muestra inspeccionada
-    val defectType: String, // Tipo de defecto (ej. "Mancha", "Hebra Suelta", "Otro")
-    val otherDefectDescription: String?, // Descripción si el tipo de defecto es "Otro"
-    val defectiveItemsQuantity: Int, // Cantidad de artículos con defecto
-    val defectDescription: String, // Descripción del defecto/observaciones
-    val actionTaken: String, // Acción tomada (ej. "Aprobado", "Rechazado")
-    val imagePaths: List<String>, // Rutas locales de las imágenes capturadas (se serializará a JSON)
-    val imageUrls: List<String>, // URLs de las imágenes subidas a Google Drive (se serializará a JSON)
-    val isSynced: Boolean = false, // Indica si la inspeEcción ya ha sido sincronizada con Google Sheets
-    val uniqueId: String // ID único para evitar duplicados en Google Sheets
-) // <--- ¡Cierra el paréntesis aquí, no hay '{' después del constructor principal para las propiedades!
-{
-    // El cuerpo de la clase (si necesitas métodos, inicializadores, etc.) va aquí
-    // pero NO las propiedades declaradas en el constructor primario
-}
+    // Nuevos campos del formulario de registro
+    val usuario: String,
+    val fecha: Date,
+    val hojaDeRuta: String, // Se almacena como String después del formato
+    val tejeduria: String,
+    val telar: Int,
+    val tintoreria: Int,
+    val articulo: String, // Se almacena como String para mayor flexibilidad con los valores
+
+    // Nuevos campos de la segunda parte del formulario
+    val tipoCalidad: String,
+    val tipoDeFalla: String?, // Puede ser nulo si TipoCalidad es "Primera"
+    val anchoDeRollo: Double, // Se cambia a Double para permitir valores decimales
+
+    // Campos para la sincronización con Google Sheets
+    val isSynced: Boolean = false,
+    val uniqueId: String,
+    val imagePaths: List<String> = emptyList(), // Rutas locales de las imágenes
+    val imageUrls: List<String> = emptyList(), // URLs de las imágenes subidas a Google Sheets
+)

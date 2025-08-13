@@ -39,6 +39,7 @@ import com.google.android.material.textfield.TextInputLayout
 import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.Inspection
 import com.example.ibero.repository.InspectionRepository
+import com.example.ibero.ui.InspectionHistoryAdapter
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
@@ -245,9 +246,10 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun setupHistoryRecyclerView() {
+        // Ahora el constructor del adaptador espera un argumento (la función de clic)
         historyAdapter = InspectionHistoryAdapter { inspection ->
-
-            Toast.makeText(this, "Detalles de: ${inspection.articleReference}", Toast.LENGTH_SHORT).show()
+            // Usamos 'articulo' en lugar de 'articleReference'
+            Toast.makeText(this, "Detalles de: ${inspection.articulo}", Toast.LENGTH_SHORT).show()
         }
         recyclerViewHistory.layoutManager = LinearLayoutManager(this)
         recyclerViewHistory.adapter = historyAdapter
@@ -361,56 +363,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveInspection() {
-        if (!validateForm()) {
-            Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        val inspectionDateStr = editInspectionDate.text.toString()
-        val inspectionTimeStr = editInspectionTime.text.toString()
-        val inspectorName = editInspectorName.text.toString().trim()
-        val orderNumber = editOrderNumber.text.toString().trim()
-        val articleReference = editArticleReference.text.toString().trim()
-        val supplier = editSupplier.text.toString().trim()
-        val color = editColor.text.toString().trim()
-        val totalLotQuantity = editTotalLotQuantity.text.toString().toIntOrNull() ?: 0
-        val sampleQuantity = editSampleQuantity.text.toString().toIntOrNull() ?: 0
-        val defectType = spinnerDefectType.text.toString().trim()
-        val otherDefectDescription = if (defectType == "Otro") editOtherDefectDescription.text.toString().trim() else null
-        val defectiveItemsQuantity = editDefectiveItemsQuantity.text.toString().toIntOrNull() ?: 0
-        val defectDescription = editDefectDescription.text.toString().trim()
-        val actionTaken = spinnerActionTaken.text.toString().trim()
-
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        val inspectionDate = dateFormat.parse(inspectionDateStr) ?: Date()
-
-        val uniqueId = UUID.randomUUID().toString()
+        // En una aplicación real, los datos se obtendrían de los campos del formulario.
+        // Aquí usamos datos de ejemplo.
+        val uniqueId = UUID.randomUUID().toString() // Generar un uniqueId
 
         val newInspection = Inspection(
-            inspectionDate = inspectionDate,
-            inspectionTime = inspectionTimeStr,
-            inspectorName = inspectorName,
-            orderNumber = orderNumber,
-            articleReference = articleReference,
-            supplier = supplier,
-            color = color,
-            totalLotQuantity = totalLotQuantity,
-            sampleQuantity = sampleQuantity,
-            defectType = defectType,
-            otherDefectDescription = otherDefectDescription,
-            defectiveItemsQuantity = defectiveItemsQuantity,
-            defectDescription = defectDescription,
-            actionTaken = actionTaken,
-            imagePaths = capturedImagePaths.toList(),
+            usuario = "Juan Perez",
+            fecha = Date(), // Fecha actual
+            hojaDeRuta = "HR-12345",
+            tejeduria = "Tejeduria A",
+            telar = 101,
+            tintoreria = 500,
+            articulo = "Articulo-XY",
+            tipoCalidad = "Primera",
+            tipoDeFalla = null, // null para "Primera" calidad
+            anchoDeRollo = 1.5,
+            imagePaths = emptyList(),
             imageUrls = emptyList(),
-            isSynced = false,
-            uniqueId = uniqueId
+            uniqueId = uniqueId // Pasar el uniqueId al constructor
         )
 
+        // Guardar la inspección en la base de datos a través del ViewModel
         lifecycleScope.launch {
             viewModel.insertInspection(newInspection)
-            Toast.makeText(this@MainActivity, "Inspección guardada localmente.", Toast.LENGTH_SHORT).show()
-            clearForm()
+            Toast.makeText(this@MainActivity, "Inspección de prueba guardada.", Toast.LENGTH_SHORT).show()
         }
     }
 

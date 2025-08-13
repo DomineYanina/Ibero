@@ -1,5 +1,6 @@
 package com.example.ibero
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -34,20 +35,17 @@ interface GoogleAppsScriptService {
     suspend fun uploadInspectionData(
         @Field("action") action: String = "addInspection",
         @Field("uniqueId") uniqueId: String,
-        @Field("inspectionDate") inspectionDate: String,
-        @Field("inspectionTime") inspectionTime: String,
-        @Field("inspectorName") inspectorName: String,
-        @Field("orderNumber") orderNumber: String,
-        @Field("articleReference") articleReference: String,
-        @Field("supplier") supplier: String,
-        @Field("color") color: String,
-        @Field("totalLotQuantity") totalLotQuantity: Int,
-        @Field("sampleQuantity") sampleQuantity: Int,
-        @Field("defectType") defectType: String,
-        @Field("otherDefectDescription") otherDefectDescription: String?,
-        @Field("defectiveItemsQuantity") defectiveItemsQuantity: Int,
-        @Field("defectDescription") defectDescription: String,
-        @Field("actionTaken") actionTaken: String,
+        // Nuevos campos del formulario
+        @Field("usuario") usuario: String,
+        @Field("fecha") fecha: String,
+        @Field("hojaDeRuta") hojaDeRuta: String,
+        @Field("tejeduria") tejeduria: String,
+        @Field("telar") telar: Int,
+        @Field("tintoreria") tintoreria: Int,
+        @Field("articulo") articulo: String,
+        @Field("tipoCalidad") tipoCalidad: String,
+        @Field("tipoDeFalla") tipoDeFalla: String?,
+        @Field("anchoDeRollo") anchoDeRollo: Double,
         @Field("imageUrls") imageUrls: String
     ): ApiResponse
 
@@ -193,21 +191,21 @@ class InspectionViewModel(private val repository: InspectionRepository) : ViewMo
                                 imageFile.delete()
                             } else {
                                 withContext(Dispatchers.Main) {
-                                    _syncMessage.value = "Error al subir imagen para ${inspection.articleReference}: ${imageUploadResponse.message}"
+                                    _syncMessage.value = "Error al subir imagen para ${inspection.articulo}: ${imageUploadResponse.message}"
                                 }
                                 currentInspectionFailed = true
                                 break
                             }
                         } catch (e: Exception) {
                             withContext(Dispatchers.Main) {
-                                _syncMessage.value = "Error de red/API al subir imagen para ${inspection.articleReference}: ${e.message}"
+                                _syncMessage.value = "Error de red/API al subir imagen para ${inspection.articulo}: ${e.message}"
                             }
                             currentInspectionFailed = true
                             break
                         }
                     } else {
                         withContext(Dispatchers.Main) {
-                            _syncMessage.value = "La imagen local no existe: $imagePath para ${inspection.articleReference}"
+                            _syncMessage.value = "La imagen local no existe: $imagePath para ${inspection.articulo}"
                         }
                     }
                 }
@@ -219,24 +217,21 @@ class InspectionViewModel(private val repository: InspectionRepository) : ViewMo
 
                 try {
                     val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                    val inspectionDateFormatted = dateFormat.format(inspection.inspectionDate)
+                    val inspectionDateFormatted = dateFormat.format(inspection.fecha)
+
 
                     val apiResponse = googleAppsScriptService.uploadInspectionData(
                         uniqueId = inspection.uniqueId,
-                        inspectionDate = inspectionDateFormatted,
-                        inspectionTime = inspection.inspectionTime,
-                        inspectorName = inspection.inspectorName,
-                        orderNumber = inspection.orderNumber,
-                        articleReference = inspection.articleReference,
-                        supplier = inspection.supplier,
-                        color = inspection.color,
-                        totalLotQuantity = inspection.totalLotQuantity,
-                        sampleQuantity = inspection.sampleQuantity,
-                        defectType = inspection.defectType,
-                        otherDefectDescription = inspection.otherDefectDescription,
-                        defectiveItemsQuantity = inspection.defectiveItemsQuantity,
-                        defectDescription = inspection.defectDescription,
-                        actionTaken = inspection.actionTaken,
+                        usuario = inspection.usuario,
+                        fecha = inspectionDateFormatted,
+                        hojaDeRuta = inspection.hojaDeRuta,
+                        tejeduria = inspection.tejeduria,
+                        telar = inspection.telar,
+                        tintoreria = inspection.tintoreria,
+                        articulo = inspection.articulo,
+                        tipoCalidad = inspection.tipoCalidad,
+                        tipoDeFalla = inspection.tipoDeFalla,
+                        anchoDeRollo = inspection.anchoDeRollo,
                         imageUrls = uploadedImageUrls.joinToString(",")
                     )
 
@@ -246,13 +241,13 @@ class InspectionViewModel(private val repository: InspectionRepository) : ViewMo
                         successfulSyncs++
                     } else {
                         withContext(Dispatchers.Main) {
-                            _syncMessage.value = "Error de sincronización para ${inspection.articleReference}: ${apiResponse.message}"
+                            _syncMessage.value = "Error de sincronización para ${inspection.articulo}: ${apiResponse.message}"
                         }
                         failedSyncs++
                     }
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
-                        _syncMessage.value = "Error de red/API al sincronizar datos para ${inspection.articleReference}: ${e.message}"
+                        _syncMessage.value = "Error de red/API al sincronizar datos para ${inspection.articulo}: ${e.message}"
                     }
                     failedSyncs++
                 }
