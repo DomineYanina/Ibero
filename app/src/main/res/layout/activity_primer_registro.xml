@@ -127,6 +127,132 @@
                 android:inputType="none"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_color"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Color"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_marginBottom="12dp">
+            <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_color"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_rollo_de_urdido"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Rollo de Urdido"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_marginBottom="12dp">
+            <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_rollo_de_urdido"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_orden"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Orden"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_marginBottom="12dp">
+            <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_orden"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_cadena"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Cadena"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_marginBottom="12dp">
+            <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_cadena"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_ancho_de_rollo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Ancho de Rollo"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_marginBottom="12dp">
+            <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_ancho_de_rollo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_esmerilado"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Esmerilado"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_marginBottom="12dp">
+            <AutoCompleteTextView
+                    android:id="@+id/spinner_esmerilado"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_ignifugo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Ignífugo"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_marginBottom="12dp">
+            <AutoCompleteTextView
+                    android:id="@+id/spinner_ignifugo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_impermeable"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Impermeable"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_marginBottom="12dp">
+            <AutoCompleteTextView
+                    android:id="@+id/spinner_impermeable"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_otro"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Otro"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_marginBottom="12dp">
+            <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_otro"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
         <Button
             android:id="@+id/btn_next"
             android:layout_width="match_parent"

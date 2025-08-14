@@ -28,7 +28,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var spinnerTipoCalidad: AutoCompleteTextView
     private lateinit var layoutTipoDeFalla: TextInputLayout
     private lateinit var spinnerTipoDeFalla: AutoCompleteTextView
-    private lateinit var editAnchoDeRollo: EditText
+    private lateinit var editMetrosDeTela: EditText // Nuevo: Metros de tela
     private lateinit var btnSave: Button
 
     // Datos de la primera pantalla
@@ -39,6 +39,15 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private var telar: Int = 0
     private var tintoreria: Int = 0
     private lateinit var articulo: String
+    private var color: Int = 0
+    private var rolloDeUrdido: Int = 0
+    private lateinit var orden: String
+    private var cadena: Int = 0
+    private var anchoDeRolloParte1: Int = 0 // Nuevo: Ancho de rollo de la primera pantalla
+    private lateinit var esmerilado: String
+    private lateinit var ignifugo: String
+    private lateinit var impermeable: String
+    private lateinit var otro: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +67,15 @@ class SegundoRegistroActivity : AppCompatActivity() {
         telar = intent.getIntExtra("TELAR", 0)
         tintoreria = intent.getIntExtra("TINTORERIA", 0)
         articulo = intent.getStringExtra("ARTICULO") ?: ""
+        color = intent.getIntExtra("COLOR", 0) // Nuevo
+        rolloDeUrdido = intent.getIntExtra("ROLLO_DE_URDIDO", 0) // Nuevo
+        orden = intent.getStringExtra("ORDEN") ?: "" // Nuevo
+        cadena = intent.getIntExtra("CADENA", 0) // Nuevo
+        anchoDeRolloParte1 = intent.getIntExtra("ANCHO_DE_ROLLO", 0) // Nuevo
+        esmerilado = intent.getStringExtra("ESMERILADO") ?: "" // Nuevo
+        ignifugo = intent.getStringExtra("IGNIFUGO") ?: "" // Nuevo
+        impermeable = intent.getStringExtra("IMPERMEABLE") ?: "" // Nuevo
+        otro = intent.getStringExtra("OTRO") ?: "" // Nuevo
 
         initViews()
         setupSpinners()
@@ -80,7 +98,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         spinnerTipoCalidad = findViewById(R.id.spinner_tipo_calidad)
         layoutTipoDeFalla = findViewById(R.id.layout_tipo_de_falla)
         spinnerTipoDeFalla = findViewById(R.id.spinner_tipo_de_falla)
-        editAnchoDeRollo = findViewById(R.id.edit_ancho_de_rollo)
+        editMetrosDeTela = findViewById(R.id.edit_metros_de_tela) // Nuevo
         btnSave = findViewById(R.id.btn_save)
     }
 
@@ -123,7 +141,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
         val tipoCalidad = spinnerTipoCalidad.text.toString()
         val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoDeFalla.text.toString() else null
-        val anchoDeRollo = editAnchoDeRollo.text.toString().toDoubleOrNull() ?: 0.0
+        val metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0 // Nuevo
 
         val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         val inspectionDate = dateFormat.parse(fecha) ?: Date()
@@ -137,9 +155,18 @@ class SegundoRegistroActivity : AppCompatActivity() {
             telar = telar,
             tintoreria = tintoreria,
             articulo = articulo,
+            color = color, // Nuevo
+            rolloDeUrdido = rolloDeUrdido, // Nuevo
+            orden = orden, // Nuevo
+            cadena = cadena, // Nuevo
+            anchoDeRollo = anchoDeRolloParte1, // Nuevo, de la primera pantalla
+            esmerilado = esmerilado, // Nuevo
+            ignifugo = ignifugo, // Nuevo
+            impermeable = impermeable, // Nuevo
+            otro = otro, // Nuevo
             tipoCalidad = tipoCalidad,
             tipoDeFalla = tipoDeFalla,
-            anchoDeRollo = anchoDeRollo,
+            metrosDeTela = metrosDeTela, // Nuevo
             uniqueId = uniqueId,
             imagePaths = emptyList(),
             imageUrls = emptyList()
@@ -151,9 +178,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
             // Intentar sincronizar inmediatamente después de guardar
             viewModel.performSync()
-
-            // ** Lógica ELIMINADA: finish() **
-            // Ahora se cierra cuando se recibe una respuesta de la sincronización.
         }
     }
 
@@ -174,11 +198,11 @@ class SegundoRegistroActivity : AppCompatActivity() {
             findViewById<TextInputLayout>(R.id.layout_tipo_de_falla).error = null
         }
 
-        if (editAnchoDeRollo.text.isNullOrBlank()) {
-            findViewById<TextInputLayout>(R.id.layout_ancho_de_rollo).error = "Ancho de Rollo es obligatorio"
+        if (editMetrosDeTela.text.isNullOrBlank()) {
+            findViewById<TextInputLayout>(R.id.layout_metros_de_tela).error = "Metros de Tela es obligatorio"
             isValid = false
         } else {
-            findViewById<TextInputLayout>(R.id.layout_ancho_de_rollo).error = null
+            findViewById<TextInputLayout>(R.id.layout_metros_de_tela).error = null
         }
 
         return isValid

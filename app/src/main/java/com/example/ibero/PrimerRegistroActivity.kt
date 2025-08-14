@@ -25,6 +25,15 @@ class PrimerRegistroActivity : AppCompatActivity() {
     private lateinit var spinnerTelar: AutoCompleteTextView
     private lateinit var editTintoreria: EditText
     private lateinit var spinnerArticulo: AutoCompleteTextView
+    private lateinit var editColor: EditText // Nuevo
+    private lateinit var editRolloDeUrdido: EditText // Nuevo
+    private lateinit var editOrden: EditText // Nuevo
+    private lateinit var editCadena: EditText // Nuevo
+    private lateinit var editAnchoDeRollo: EditText // Nuevo
+    private lateinit var spinnerEsmerilado: AutoCompleteTextView // Nuevo
+    private lateinit var spinnerIgnifugo: AutoCompleteTextView // Nuevo
+    private lateinit var spinnerImpermeable: AutoCompleteTextView // Nuevo
+    private lateinit var editOtro: EditText // Nuevo
     private lateinit var btnNext: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +56,15 @@ class PrimerRegistroActivity : AppCompatActivity() {
         spinnerTelar = findViewById(R.id.spinner_telar)
         editTintoreria = findViewById(R.id.edit_tintoreria)
         spinnerArticulo = findViewById(R.id.spinner_articulo)
+        editColor = findViewById(R.id.edit_color) // Nuevo
+        editRolloDeUrdido = findViewById(R.id.edit_rollo_de_urdido) // Nuevo
+        editOrden = findViewById(R.id.edit_orden) // Nuevo
+        editCadena = findViewById(R.id.edit_cadena) // Nuevo
+        editAnchoDeRollo = findViewById(R.id.edit_ancho_de_rollo) // Nuevo
+        spinnerEsmerilado = findViewById(R.id.spinner_esmerilado) // Nuevo
+        spinnerIgnifugo = findViewById(R.id.spinner_ignifugo) // Nuevo
+        spinnerImpermeable = findViewById(R.id.spinner_impermeable) // Nuevo
+        editOtro = findViewById(R.id.edit_otro) // Nuevo
         btnNext = findViewById(R.id.btn_next)
 
         textUsuario.text = "Usuario: $loggedInUser"
@@ -68,6 +86,13 @@ class PrimerRegistroActivity : AppCompatActivity() {
         )
         val articuloAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, articuloOptions)
         spinnerArticulo.setAdapter(articuloAdapter)
+
+        // Spinners para Esmerilado, Ignifugo e Impermeable
+        val siNoOptions = arrayOf("Sí", "No")
+        val siNoAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, siNoOptions)
+        spinnerEsmerilado.setAdapter(siNoAdapter)
+        spinnerIgnifugo.setAdapter(siNoAdapter)
+        spinnerImpermeable.setAdapter(siNoAdapter)
     }
 
     private fun setupListeners() {
@@ -79,9 +104,12 @@ class PrimerRegistroActivity : AppCompatActivity() {
             if (validateForm()) {
                 val intent = Intent(this, SegundoRegistroActivity::class.java)
 
-                // Obtener valores y manejar conversiones de forma segura
                 val telarValue = spinnerTelar.text.toString().toIntOrNull() ?: 0
                 val tintoreriaValue = editTintoreria.text.toString().toIntOrNull() ?: 0
+                val colorValue = editColor.text.toString().toIntOrNull() ?: 0 // Nuevo
+                val rolloUrdidoValue = editRolloDeUrdido.text.toString().toIntOrNull() ?: 0 // Nuevo
+                val cadenaValue = editCadena.text.toString().toIntOrNull() ?: 0 // Nuevo
+                val anchoRolloValue = editAnchoDeRollo.text.toString().toIntOrNull() ?: 0 // Nuevo
 
                 intent.putExtra("LOGGED_IN_USER", loggedInUser)
                 intent.putExtra("FECHA", editFecha.text.toString())
@@ -90,6 +118,16 @@ class PrimerRegistroActivity : AppCompatActivity() {
                 intent.putExtra("TELAR", telarValue)
                 intent.putExtra("TINTORERIA", tintoreriaValue)
                 intent.putExtra("ARTICULO", spinnerArticulo.text.toString())
+                intent.putExtra("COLOR", colorValue) // Nuevo
+                intent.putExtra("ROLLO_DE_URDIDO", rolloUrdidoValue) // Nuevo
+                intent.putExtra("ORDEN", editOrden.text.toString()) // Nuevo
+                intent.putExtra("CADENA", cadenaValue) // Nuevo
+                intent.putExtra("ANCHO_DE_ROLLO", anchoRolloValue) // Nuevo
+                intent.putExtra("ESMERILADO", spinnerEsmerilado.text.toString()) // Nuevo
+                intent.putExtra("IGNIFUGO", spinnerIgnifugo.text.toString()) // Nuevo
+                intent.putExtra("IMPERMEABLE", spinnerImpermeable.text.toString()) // Nuevo
+                intent.putExtra("OTRO", editOtro.text.toString()) // Nuevo
+
                 startActivity(intent)
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
@@ -126,36 +164,65 @@ class PrimerRegistroActivity : AppCompatActivity() {
 
     private fun validateForm(): Boolean {
         var isValid = true
-        if (editHojaDeRuta.text.isNullOrBlank()) {
-            findViewById<TextInputLayout>(R.id.layout_hoja_de_ruta).error = "Hoja de Ruta es obligatoria"
-            isValid = false
-        } else {
-            findViewById<TextInputLayout>(R.id.layout_hoja_de_ruta).error = null
+        val requiredEditTexts = listOf(
+            R.id.edit_hoja_de_ruta to "Hoja de Ruta es obligatoria",
+            R.id.edit_tintoreria to "Tintoreria es obligatoria",
+            R.id.edit_color to "Color es obligatorio", // Nuevo
+            R.id.edit_rollo_de_urdido to "Rollo de urdido es obligatorio", // Nuevo
+            R.id.edit_orden to "Orden es obligatoria", // Nuevo
+            R.id.edit_cadena to "Cadena es obligatoria", // Nuevo
+            R.id.edit_ancho_de_rollo to "Ancho de rollo es obligatorio", // Nuevo
+        )
+
+        for ((id, message) in requiredEditTexts) {
+            val editText = findViewById<EditText>(id)
+            if (editText.text.isNullOrBlank()) {
+                findViewById<TextInputLayout>(parentLayoutId(id)).error = message
+                isValid = false
+            } else {
+                findViewById<TextInputLayout>(parentLayoutId(id)).error = null
+            }
         }
-        if (spinnerTejeduria.text.isNullOrBlank()) {
-            findViewById<TextInputLayout>(R.id.layout_tejeduria).error = "Tejeduria es obligatoria"
-            isValid = false
-        } else {
-            findViewById<TextInputLayout>(R.id.layout_tejeduria).error = null
+
+        val requiredSpinners = listOf(
+            R.id.spinner_tejeduria to "Tejeduria es obligatoria",
+            R.id.spinner_telar to "Telar es obligatorio",
+            R.id.spinner_articulo to "Artículo es obligatorio",
+            R.id.spinner_esmerilado to "Esmerilado es obligatorio", // Nuevo
+            R.id.spinner_ignifugo to "Ignifugo es obligatorio", // Nuevo
+            R.id.spinner_impermeable to "Impermeable es obligatorio" // Nuevo
+        )
+
+        for ((id, message) in requiredSpinners) {
+            val spinner = findViewById<AutoCompleteTextView>(id)
+            if (spinner.text.isNullOrBlank()) {
+                findViewById<TextInputLayout>(parentLayoutId(id)).error = message
+                isValid = false
+            } else {
+                findViewById<TextInputLayout>(parentLayoutId(id)).error = null
+            }
         }
-        if (spinnerTelar.text.isNullOrBlank()) {
-            findViewById<TextInputLayout>(R.id.layout_telar).error = "Telar es obligatorio"
-            isValid = false
-        } else {
-            findViewById<TextInputLayout>(R.id.layout_telar).error = null
-        }
-        if (editTintoreria.text.isNullOrBlank()) {
-            findViewById<TextInputLayout>(R.id.layout_tintoreria).error = "Tintoreria es obligatoria"
-            isValid = false
-        } else {
-            findViewById<TextInputLayout>(R.id.layout_tintoreria).error = null
-        }
-        if (spinnerArticulo.text.isNullOrBlank()) {
-            findViewById<TextInputLayout>(R.id.layout_articulo).error = "Artículo es obligatorio"
-            isValid = false
-        } else {
-            findViewById<TextInputLayout>(R.id.layout_articulo).error = null
-        }
+
         return isValid
+    }
+
+    // Helper function to find the parent TextInputLayout ID from the child EditText ID
+    private fun parentLayoutId(childId: Int): Int {
+        return when (childId) {
+            R.id.edit_hoja_de_ruta -> R.id.layout_hoja_de_ruta
+            R.id.spinner_tejeduria -> R.id.layout_tejeduria
+            R.id.spinner_telar -> R.id.layout_telar
+            R.id.edit_tintoreria -> R.id.layout_tintoreria
+            R.id.spinner_articulo -> R.id.layout_articulo
+            R.id.edit_color -> R.id.layout_color
+            R.id.edit_rollo_de_urdido -> R.id.layout_rollo_de_urdido
+            R.id.edit_orden -> R.id.layout_orden
+            R.id.edit_cadena -> R.id.layout_cadena
+            R.id.edit_ancho_de_rollo -> R.id.layout_ancho_de_rollo
+            R.id.spinner_esmerilado -> R.id.layout_esmerilado
+            R.id.spinner_ignifugo -> R.id.layout_ignifugo
+            R.id.spinner_impermeable -> R.id.layout_impermeable
+            else -> throw IllegalArgumentException("Unknown child ID")
+        }
     }
 }

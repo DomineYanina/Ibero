@@ -83,9 +83,18 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                         telar = inspection.telar,
                         tintoreria = inspection.tintoreria,
                         articulo = inspection.articulo,
+                        color = inspection.color, // Nuevo
+                        rolloDeUrdido = inspection.rolloDeUrdido, // Nuevo
+                        orden = inspection.orden, // Nuevo
+                        cadena = inspection.cadena, // Nuevo
+                        anchoDeRollo = inspection.anchoDeRollo, // Nuevo, de la primera pantalla
+                        esmerilado = inspection.esmerilado, // Nuevo
+                        ignifugo = inspection.ignifugo, // Nuevo
+                        impermeable = inspection.impermeable, // Nuevo
+                        otro = inspection.otro, // Nuevo
                         tipoCalidad = inspection.tipoCalidad,
                         tipoDeFalla = inspection.tipoDeFalla, // puede ser null
-                        anchoDeRollo = inspection.anchoDeRollo,
+                        metrosDeTela = inspection.metrosDeTela, // Nuevo
                         imageUrls = inspection.imageUrls.joinToString(",")
                     )
 

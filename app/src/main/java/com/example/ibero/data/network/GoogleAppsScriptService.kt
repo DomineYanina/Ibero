@@ -25,9 +25,18 @@ interface GoogleAppsScriptService {
         @Field("telar") telar: Int,
         @Field("tintoreria") tintoreria: Int,
         @Field("articulo") articulo: String,
+        @Field("color") color: Int,               // Nuevo campo
+        @Field("rolloDeUrdido") rolloDeUrdido: Int,   // Nuevo campo
+        @Field("orden") orden: String,            // Nuevo campo
+        @Field("cadena") cadena: Int,             // Nuevo campo
+        @Field("anchoDeRollo") anchoDeRollo: Int,       // Nuevo campo, tipo Int
+        @Field("esmerilado") esmerilado: String,      // Nuevo campo
+        @Field("ignifugo") ignifugo: String,        // Nuevo campo
+        @Field("impermeable") impermeable: String,      // Nuevo campo
+        @Field("otro") otro: String,             // Nuevo campo
         @Field("tipoCalidad") tipoCalidad: String,
         @Field("tipoDeFalla") tipoDeFalla: String?,  // puede ir null
-        @Field("anchoDeRollo") anchoDeRollo: Double,
+        @Field("metrosDeTela") metrosDeTela: Double, // Nuevo campo
         @Field("imageUrls") imageUrls: String        // CSV si hay varias
     ): ApiResponse
 }
@@ -37,12 +46,12 @@ object GoogleSheetsApi {
      * IMPORTANTÍSIMO:
      * Pega aquí la URL de despliegue de tu Apps Script PERO sin el "/exec" final.
      * Si la URL publicada es:
-     *   https://script.google.com/macros/s/AKfycb.../exec
+     * https://script.google.com/macros/s/AKfycb.../exec
      * usa como BASE_URL:
-     *   https://script.google.com/macros/s/AKfycb.../
+     * https://script.google.com/macros/s/AKfycb.../
      */
     private const val BASE_URL =
-        "https://script.google.com/macros/s/AKfycbyOV70_ZRAtwe5u9-htIcFFn1LOgKKrjc8KzTrBrkZV-nsM4B7NBhDk0GTZHiV7GEx4NQ/"
+        "https://script.google.com/macros/s/AKfycbxdCJf76Z_5dG9BVhc58P8m0a2Y6nSc8h8dmWa49QlM9Qr303jutNuWoZgAFWLR2QPLrw/"
 
     val service: GoogleAppsScriptService by lazy {
         val logging = HttpLoggingInterceptor().apply {

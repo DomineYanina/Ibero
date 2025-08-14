@@ -9,23 +9,32 @@ data class Inspection(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
 
-    // Nuevos campos del formulario de registro
+    // Campos del formulario de registro (Parte 1)
     val usuario: String,
     val fecha: Date,
-    val hojaDeRuta: String, // Se almacena como String después del formato
+    val hojaDeRuta: String,
     val tejeduria: String,
     val telar: Int,
     val tintoreria: Int,
-    val articulo: String, // Se almacena como String para mayor flexibilidad con los valores
+    val articulo: String,
+    val color: Int,
+    val rolloDeUrdido: Int,
+    val orden: String,
+    val cadena: Int,
+    val anchoDeRollo: Int, // Ancho de rollo de la primera pantalla
+    val esmerilado: String,
+    val ignifugo: String,
+    val impermeable: String,
+    val otro: String,
 
-    // Nuevos campos de la segunda parte del formulario
+    // Campos de la segunda parte del formulario (Parte 2)
     val tipoCalidad: String,
     val tipoDeFalla: String?, // Puede ser nulo si TipoCalidad es "Primera"
-    val anchoDeRollo: Double, // Se cambia a Double para permitir valores decimales
+    val metrosDeTela: Double, // Renombrado de anchoDeRolloParte2
 
     // Campos para la sincronización con Google Sheets
     val isSynced: Boolean = false,
     val uniqueId: String,
-    val imagePaths: List<String> = emptyList(), // Rutas locales de las imágenes
-    val imageUrls: List<String> = emptyList(), // URLs de las imágenes subidas a Google Sheets
+    val imagePaths: List<String> = emptyList(),
+    val imageUrls: List<String> = emptyList(),
 )
