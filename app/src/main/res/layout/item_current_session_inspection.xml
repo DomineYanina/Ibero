@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp">
+
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+        <TextView
+                android:id="@+id/text_view_item_articulo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Artículo: ART-123"
+                android:textAppearance="?attr/textAppearanceListItem"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+
+        <TextView
+                android:id="@+id/text_view_item_calidad"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Calidad: Primera"
+                android:textAppearance="?attr/textAppearanceListItemSecondary"/>
+
+        <TextView
+                android:id="@+id/text_view_item_metros"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Metros: 50.0"
+                android:textAppearance="?attr/textAppearanceListItemSecondary"/>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

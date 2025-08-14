@@ -1,7 +1,7 @@
 package com.example.ibero
 
+import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
@@ -11,9 +11,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.example.ibero.data.AppDatabase
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.ibero.data.Inspection
-import com.example.ibero.repository.InspectionRepository
+import com.example.ibero.ui.CurrentSessionInspectionAdapter
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -29,8 +30,11 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var layoutTipoDeFalla: TextInputLayout
     private lateinit var spinnerTipoDeFalla: AutoCompleteTextView
     private lateinit var editMetrosDeTela: EditText
-    private lateinit var btnGuardarRegistro: Button // Botón original (guardar y finalizar)
-    private lateinit var btnIncorporar: Button      // Nuevo botón (guardar y limpiar)
+    private lateinit var btnGuardarRegistro: Button
+    private lateinit var btnIncorporar: Button
+
+    private lateinit var recyclerViewCurrentSessionRecords: RecyclerView
+    private lateinit var currentSessionInspectionAdapter: CurrentSessionInspectionAdapter
 
     // Datos de la primera pantalla que se mantienen
     private lateinit var usuario: String
@@ -54,8 +58,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_segundo_registro)
 
-        val database = AppDatabase.getDatabase(applicationContext)
-        val repository = InspectionRepository(database.inspectionDao())
         val factory = InspectionViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
@@ -80,14 +82,19 @@ class SegundoRegistroActivity : AppCompatActivity() {
         initViews()
         setupSpinners()
         setupListeners()
+        setupCurrentSessionRecyclerView()
 
-        // Observa el estado de sincronización.
-        // La actividad solo se cerrará cuando el botón "Guardar Registro" sea presionado
+        // Observa los mensajes de sincronización del ViewModel para mostrarlos al usuario
         viewModel.syncMessage.observe(this) { message ->
             message?.let {
                 Toast.makeText(this, it, Toast.LENGTH_LONG).show()
                 viewModel.clearSyncMessage()
             }
+        }
+
+        // Observa la lista de registros de la sesión actual
+        viewModel.currentSessionInspections.observe(this) { inspections ->
+            currentSessionInspectionAdapter.updateList(inspections)
         }
     }
 
@@ -96,8 +103,9 @@ class SegundoRegistroActivity : AppCompatActivity() {
         layoutTipoDeFalla = findViewById(R.id.layout_tipo_de_falla)
         spinnerTipoDeFalla = findViewById(R.id.spinner_tipo_de_falla)
         editMetrosDeTela = findViewById(R.id.edit_metros_de_tela)
-        btnGuardarRegistro = findViewById(R.id.btn_guardar_registro) // Botón original
-        btnIncorporar = findViewById(R.id.btn_incorporar)            // Nuevo botón
+        btnGuardarRegistro = findViewById(R.id.btn_guardar_registro)
+        btnIncorporar = findViewById(R.id.btn_incorporar)
+        recyclerViewCurrentSessionRecords = findViewById(R.id.recycler_view_current_session_records)
     }
 
     private fun setupSpinners() {
@@ -126,7 +134,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        // Lógica para el nuevo botón "Incorporar"
         btnIncorporar.setOnClickListener {
             if (validateForm()) {
                 saveInspectionAndResetForm()
@@ -135,7 +142,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
             }
         }
 
-        // Lógica para el botón original "Guardar Registro"
         btnGuardarRegistro.setOnClickListener {
             if (validateForm()) {
                 saveInspectionAndFinalize()
@@ -145,54 +151,38 @@ class SegundoRegistroActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupCurrentSessionRecyclerView() {
+        currentSessionInspectionAdapter = CurrentSessionInspectionAdapter(mutableListOf())
+        recyclerViewCurrentSessionRecords.layoutManager = LinearLayoutManager(this)
+        recyclerViewCurrentSessionRecords.adapter = currentSessionInspectionAdapter
+    }
+
     private fun saveInspectionAndResetForm() {
-        val tipoCalidad = spinnerTipoCalidad.text.toString()
-        val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoDeFalla.text.toString() else null
-        val metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
-
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        val inspectionDate = dateFormat.parse(fecha) ?: Date()
-        val uniqueId = UUID.randomUUID().toString()
-
-        val newInspection = Inspection(
-            usuario = usuario,
-            fecha = inspectionDate,
-            hojaDeRuta = hojaDeRuta,
-            tejeduria = tejeduria,
-            telar = telar,
-            tintoreria = tintoreria,
-            articulo = articulo,
-            color = color,
-            rolloDeUrdido = rolloDeUrdido,
-            orden = orden,
-            cadena = cadena,
-            anchoDeRollo = anchoDeRolloParte1,
-            esmerilado = esmerilado,
-            ignifugo = ignifugo,
-            impermeable = impermeable,
-            otro = otro,
-            tipoCalidad = tipoCalidad,
-            tipoDeFalla = tipoDeFalla,
-            metrosDeTela = metrosDeTela,
-            uniqueId = uniqueId,
-            imagePaths = emptyList(),
-            imageUrls = emptyList()
-        )
-
+        val inspection = createInspectionObject()
         lifecycleScope.launch {
-            // Guardar localmente
-            viewModel.insertInspection(newInspection)
-
-            // Intentar sincronizar inmediatamente después de guardar
+            viewModel.insertInspection(inspection)
             viewModel.performSync()
-
-            // Limpiar los campos para el siguiente registro
             resetForm()
-            Toast.makeText(this@SegundoRegistroActivity, "Registro incorporado. Puede ingresar otro.", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun saveInspectionAndFinalize() {
+        val inspection = createInspectionObject()
+        lifecycleScope.launch {
+            viewModel.insertInspection(inspection)
+            viewModel.performSync()
+
+            // Limpiar la lista de registros de la sesión antes de finalizar
+            viewModel.clearCurrentSessionList()
+
+            val intent = Intent(this@SegundoRegistroActivity, MainActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+            startActivity(intent)
+            finish()
+        }
+    }
+
+    private fun createInspectionObject(): Inspection {
         val tipoCalidad = spinnerTipoCalidad.text.toString()
         val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoDeFalla.text.toString() else null
         val metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
@@ -201,7 +191,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         val inspectionDate = dateFormat.parse(fecha) ?: Date()
         val uniqueId = UUID.randomUUID().toString()
 
-        val newInspection = Inspection(
+        return Inspection(
             usuario = usuario,
             fecha = inspectionDate,
             hojaDeRuta = hojaDeRuta,
@@ -225,18 +215,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
             imagePaths = emptyList(),
             imageUrls = emptyList()
         )
-
-        lifecycleScope.launch {
-            // Guardar localmente
-            viewModel.insertInspection(newInspection)
-
-            // Intentar sincronizar inmediatamente después de guardar
-            viewModel.performSync()
-
-            // Finalizar la actividad
-            Toast.makeText(this@SegundoRegistroActivity, "Registro finalizado. Sincronizando...", Toast.LENGTH_SHORT).show()
-            finish()
-        }
     }
 
     private fun resetForm() {
@@ -244,7 +222,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
         spinnerTipoDeFalla.setText("", false)
         layoutTipoDeFalla.visibility = View.GONE
         editMetrosDeTela.text.clear()
-        // Los datos de la primera pantalla se mantienen en la memoria
     }
 
     private fun validateForm(): Boolean {

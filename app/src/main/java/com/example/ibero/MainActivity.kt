@@ -105,27 +105,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
-    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         initViews()
 
-        val database = AppDatabase.getDatabase(applicationContext)
-        val repository = InspectionRepository(database.inspectionDao())
+        // Se corrigió la inicialización del ViewModel
         val factory = InspectionViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
         setupSpinners()
-
         setupListeners()
-
         observeViewModel()
-
         setupHistoryRecyclerView()
-
         setCurrentDateTime()
     }
 
@@ -174,8 +167,6 @@ class MainActivity : AppCompatActivity() {
         spinnerActionTaken.setAdapter(actionAdapter)
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
-    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     private fun setupListeners() {
         editInspectionDate.setOnClickListener {
             showDatePickerDialog()
@@ -189,10 +180,6 @@ class MainActivity : AppCompatActivity() {
             checkCameraPermissionAndTakePicture()
         }
 
-        // El botón de guardar en esta actividad ya no hace nada.
-        // La lógica de guardado se movió a SegundoRegistroActivity.
-        // Si esta MainActivity se usa para algo más, el listener debería
-        // navegar a la siguiente pantalla.
         btnSaveInspection.setOnClickListener {
             Toast.makeText(this, "Esta funcionalidad ha sido movida a la pantalla de registro.", Toast.LENGTH_SHORT).show()
         }
@@ -201,6 +188,7 @@ class MainActivity : AppCompatActivity() {
             clearForm()
         }
 
+        // Se corrigió el listener para usar la función correcta del ViewModel
         btnForceSync.setOnClickListener {
             viewModel.performSync()
         }
@@ -226,10 +214,7 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
-    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     private fun observeViewModel() {
-
         viewModel.allInspections.observe(this) { inspections ->
             historyAdapter.submitList(inspections)
         }
@@ -358,9 +343,6 @@ class MainActivity : AppCompatActivity() {
         imagePreviewContainer.visibility = View.VISIBLE
     }
 
-    // El método saveInspection() fue eliminado de esta clase.
-    // La lógica de guardado y sincronización ahora reside en SegundoRegistroActivity.
-
     private fun validateForm(): Boolean {
         var isValid = true
 
@@ -434,28 +416,5 @@ class MainActivity : AppCompatActivity() {
             editText.error = null
         }
         Toast.makeText(this, "Formulario limpiado.", Toast.LENGTH_SHORT).show()
-    }
-
-    @RequiresApi(Build.VERSION_CODES.M)
-    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
-    private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-    }
-
-    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
-    @RequiresApi(Build.VERSION_CODES.M)
-    override fun onResume() {
-        super.onResume()
-        val isAvailable = isNetworkAvailable()
-        viewModel.updateNetworkStatus(isAvailable)
-
-        if (isAvailable) {
-            viewModel.performSync()
-        }
     }
 }
