@@ -28,10 +28,11 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var spinnerTipoCalidad: AutoCompleteTextView
     private lateinit var layoutTipoDeFalla: TextInputLayout
     private lateinit var spinnerTipoDeFalla: AutoCompleteTextView
-    private lateinit var editMetrosDeTela: EditText // Nuevo: Metros de tela
-    private lateinit var btnSave: Button
+    private lateinit var editMetrosDeTela: EditText
+    private lateinit var btnGuardarRegistro: Button // Botón original (guardar y finalizar)
+    private lateinit var btnIncorporar: Button      // Nuevo botón (guardar y limpiar)
 
-    // Datos de la primera pantalla
+    // Datos de la primera pantalla que se mantienen
     private lateinit var usuario: String
     private lateinit var fecha: String
     private lateinit var hojaDeRuta: String
@@ -43,7 +44,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private var rolloDeUrdido: Int = 0
     private lateinit var orden: String
     private var cadena: Int = 0
-    private var anchoDeRolloParte1: Int = 0 // Nuevo: Ancho de rollo de la primera pantalla
+    private var anchoDeRolloParte1: Int = 0
     private lateinit var esmerilado: String
     private lateinit var ignifugo: String
     private lateinit var impermeable: String
@@ -53,7 +54,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_segundo_registro)
 
-        // Inicializar ViewModel
         val database = AppDatabase.getDatabase(applicationContext)
         val repository = InspectionRepository(database.inspectionDao())
         val factory = InspectionViewModelFactory(application)
@@ -67,29 +67,26 @@ class SegundoRegistroActivity : AppCompatActivity() {
         telar = intent.getIntExtra("TELAR", 0)
         tintoreria = intent.getIntExtra("TINTORERIA", 0)
         articulo = intent.getStringExtra("ARTICULO") ?: ""
-        color = intent.getIntExtra("COLOR", 0) // Nuevo
-        rolloDeUrdido = intent.getIntExtra("ROLLO_DE_URDIDO", 0) // Nuevo
-        orden = intent.getStringExtra("ORDEN") ?: "" // Nuevo
-        cadena = intent.getIntExtra("CADENA", 0) // Nuevo
-        anchoDeRolloParte1 = intent.getIntExtra("ANCHO_DE_ROLLO", 0) // Nuevo
-        esmerilado = intent.getStringExtra("ESMERILADO") ?: "" // Nuevo
-        ignifugo = intent.getStringExtra("IGNIFUGO") ?: "" // Nuevo
-        impermeable = intent.getStringExtra("IMPERMEABLE") ?: "" // Nuevo
-        otro = intent.getStringExtra("OTRO") ?: "" // Nuevo
+        color = intent.getIntExtra("COLOR", 0)
+        rolloDeUrdido = intent.getIntExtra("ROLLO_DE_URDIDO", 0)
+        orden = intent.getStringExtra("ORDEN") ?: ""
+        cadena = intent.getIntExtra("CADENA", 0)
+        anchoDeRolloParte1 = intent.getIntExtra("ANCHO_DE_ROLLO", 0)
+        esmerilado = intent.getStringExtra("ESMERILADO") ?: ""
+        ignifugo = intent.getStringExtra("IGNIFUGO") ?: ""
+        impermeable = intent.getStringExtra("IMPERMEABLE") ?: ""
+        otro = intent.getStringExtra("OTRO") ?: ""
 
         initViews()
         setupSpinners()
         setupListeners()
 
-        // ** NUEVA LÓGICA: Observar el estado de sincronización **
-        // Esto asegura que la actividad no se cierre hasta que la sincronización se complete
+        // Observa el estado de sincronización.
+        // La actividad solo se cerrará cuando el botón "Guardar Registro" sea presionado
         viewModel.syncMessage.observe(this) { message ->
             message?.let {
                 Toast.makeText(this, it, Toast.LENGTH_LONG).show()
                 viewModel.clearSyncMessage()
-                // Una vez que se ha recibido la respuesta de sincronización (éxito o error),
-                // se puede cerrar la actividad.
-                finish()
             }
         }
     }
@@ -98,8 +95,9 @@ class SegundoRegistroActivity : AppCompatActivity() {
         spinnerTipoCalidad = findViewById(R.id.spinner_tipo_calidad)
         layoutTipoDeFalla = findViewById(R.id.layout_tipo_de_falla)
         spinnerTipoDeFalla = findViewById(R.id.spinner_tipo_de_falla)
-        editMetrosDeTela = findViewById(R.id.edit_metros_de_tela) // Nuevo
-        btnSave = findViewById(R.id.btn_save)
+        editMetrosDeTela = findViewById(R.id.edit_metros_de_tela)
+        btnGuardarRegistro = findViewById(R.id.btn_guardar_registro) // Botón original
+        btnIncorporar = findViewById(R.id.btn_incorporar)            // Nuevo botón
     }
 
     private fun setupSpinners() {
@@ -128,20 +126,29 @@ class SegundoRegistroActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        btnSave.setOnClickListener {
-            saveInspection()
+        // Lógica para el nuevo botón "Incorporar"
+        btnIncorporar.setOnClickListener {
+            if (validateForm()) {
+                saveInspectionAndResetForm()
+            } else {
+                Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Lógica para el botón original "Guardar Registro"
+        btnGuardarRegistro.setOnClickListener {
+            if (validateForm()) {
+                saveInspectionAndFinalize()
+            } else {
+                Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
-    private fun saveInspection() {
-        if (!validateForm()) {
-            Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
+    private fun saveInspectionAndResetForm() {
         val tipoCalidad = spinnerTipoCalidad.text.toString()
         val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoDeFalla.text.toString() else null
-        val metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0 // Nuevo
+        val metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
 
         val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         val inspectionDate = dateFormat.parse(fecha) ?: Date()
@@ -155,18 +162,18 @@ class SegundoRegistroActivity : AppCompatActivity() {
             telar = telar,
             tintoreria = tintoreria,
             articulo = articulo,
-            color = color, // Nuevo
-            rolloDeUrdido = rolloDeUrdido, // Nuevo
-            orden = orden, // Nuevo
-            cadena = cadena, // Nuevo
-            anchoDeRollo = anchoDeRolloParte1, // Nuevo, de la primera pantalla
-            esmerilado = esmerilado, // Nuevo
-            ignifugo = ignifugo, // Nuevo
-            impermeable = impermeable, // Nuevo
-            otro = otro, // Nuevo
+            color = color,
+            rolloDeUrdido = rolloDeUrdido,
+            orden = orden,
+            cadena = cadena,
+            anchoDeRollo = anchoDeRolloParte1,
+            esmerilado = esmerilado,
+            ignifugo = ignifugo,
+            impermeable = impermeable,
+            otro = otro,
             tipoCalidad = tipoCalidad,
             tipoDeFalla = tipoDeFalla,
-            metrosDeTela = metrosDeTela, // Nuevo
+            metrosDeTela = metrosDeTela,
             uniqueId = uniqueId,
             imagePaths = emptyList(),
             imageUrls = emptyList()
@@ -178,7 +185,66 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
             // Intentar sincronizar inmediatamente después de guardar
             viewModel.performSync()
+
+            // Limpiar los campos para el siguiente registro
+            resetForm()
+            Toast.makeText(this@SegundoRegistroActivity, "Registro incorporado. Puede ingresar otro.", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun saveInspectionAndFinalize() {
+        val tipoCalidad = spinnerTipoCalidad.text.toString()
+        val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoDeFalla.text.toString() else null
+        val metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
+
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        val inspectionDate = dateFormat.parse(fecha) ?: Date()
+        val uniqueId = UUID.randomUUID().toString()
+
+        val newInspection = Inspection(
+            usuario = usuario,
+            fecha = inspectionDate,
+            hojaDeRuta = hojaDeRuta,
+            tejeduria = tejeduria,
+            telar = telar,
+            tintoreria = tintoreria,
+            articulo = articulo,
+            color = color,
+            rolloDeUrdido = rolloDeUrdido,
+            orden = orden,
+            cadena = cadena,
+            anchoDeRollo = anchoDeRolloParte1,
+            esmerilado = esmerilado,
+            ignifugo = ignifugo,
+            impermeable = impermeable,
+            otro = otro,
+            tipoCalidad = tipoCalidad,
+            tipoDeFalla = tipoDeFalla,
+            metrosDeTela = metrosDeTela,
+            uniqueId = uniqueId,
+            imagePaths = emptyList(),
+            imageUrls = emptyList()
+        )
+
+        lifecycleScope.launch {
+            // Guardar localmente
+            viewModel.insertInspection(newInspection)
+
+            // Intentar sincronizar inmediatamente después de guardar
+            viewModel.performSync()
+
+            // Finalizar la actividad
+            Toast.makeText(this@SegundoRegistroActivity, "Registro finalizado. Sincronizando...", Toast.LENGTH_SHORT).show()
+            finish()
+        }
+    }
+
+    private fun resetForm() {
+        spinnerTipoCalidad.setText("", false)
+        spinnerTipoDeFalla.setText("", false)
+        layoutTipoDeFalla.visibility = View.GONE
+        editMetrosDeTela.text.clear()
+        // Los datos de la primera pantalla se mantienen en la memoria
     }
 
     private fun validateForm(): Boolean {
