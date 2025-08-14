@@ -29,6 +29,8 @@ import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -113,7 +115,7 @@ class MainActivity : AppCompatActivity() {
 
         val database = AppDatabase.getDatabase(applicationContext)
         val repository = InspectionRepository(database.inspectionDao())
-        val factory = InspectionViewModelFactory(repository)
+        val factory = InspectionViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
         setupSpinners()
@@ -196,7 +198,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnForceSync.setOnClickListener {
-            viewModel.requestManualSync()
+            viewModel.performSync()
         }
 
         addRequiredFieldValidation(editArticleReference, "Referencia del Artículo es obligatoria")
@@ -224,13 +226,13 @@ class MainActivity : AppCompatActivity() {
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     private fun observeViewModel() {
 
-        viewModel.unsyncedCount.observe(this) { count ->
-            val currentNetworkStatus = isNetworkAvailable()
-            viewModel.updateNetworkStatus(currentNetworkStatus)
-
-            val networkStatusText = if (currentNetworkStatus) "Online" else "Offline"
-            textSyncStatus.text = "Estado: $networkStatusText | Pendientes: $count"
-        }
+        // Elimina este bloque completo
+        // viewModel.unsyncedCount.observe(this) { count ->
+        //     val currentNetworkStatus = isNetworkAvailable()
+        //     viewModel.updateNetworkStatus(currentNetworkStatus)
+        //     val networkStatusText = if (currentNetworkStatus) "Online" else "Offline"
+        //     textSyncStatus.text = "Estado: $networkStatusText | Pendientes: $count"
+        // }
 
         viewModel.allInspections.observe(this) { inspections ->
             historyAdapter.submitList(inspections)

@@ -107,4 +107,11 @@ dependencies {
     implementation(libs.squareup.okhttp)
     implementation(libs.squareup.okhttp.logging.interceptor)
 
+    // OkHttp para llamadas a la API
+    implementation(libs.okhttp.v4100)
+
+    // Coroutines para gestión de hilos
+    implementation(libs.kotlinx.coroutines.core.v171)
+    implementation(libs.kotlinx.coroutines.android.v171)
+
 }

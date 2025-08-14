@@ -1,286 +1,115 @@
 package com.example.ibero
 
-import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.map
-import androidx.lifecycle.viewModelScope
+import android.app.Application
+import androidx.lifecycle.*
+import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.Inspection
+import com.example.ibero.data.network.ApiResponse
+import com.example.ibero.data.network.GoogleSheetsApi
 import com.example.ibero.repository.InspectionRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.Field
-import retrofit2.http.FormUrlEncoded
-import retrofit2.http.Multipart
-import retrofit2.http.POST
-import retrofit2.http.Part
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Locale
 
-interface GoogleAppsScriptService {
-    @FormUrlEncoded
-    @POST("exec")
-    suspend fun uploadInspectionData(
-        @Field("action") action: String = "addInspection",
-        @Field("uniqueId") uniqueId: String,
-        // Nuevos campos del formulario
-        @Field("usuario") usuario: String,
-        @Field("fecha") fecha: String,
-        @Field("hojaDeRuta") hojaDeRuta: String,
-        @Field("tejeduria") tejeduria: String,
-        @Field("telar") telar: Int,
-        @Field("tintoreria") tintoreria: Int,
-        @Field("articulo") articulo: String,
-        @Field("tipoCalidad") tipoCalidad: String,
-        @Field("tipoDeFalla") tipoDeFalla: String?,
-        @Field("anchoDeRollo") anchoDeRollo: Double,
-        @Field("imageUrls") imageUrls: String
-    ): ApiResponse
+class InspectionViewModel(application: Application) : AndroidViewModel(application) {
 
-    @Multipart
-    @POST("exec")
-    suspend fun uploadImage(
-        @Part("action") action: String = "uploadImage",
-        @Part("uniqueId") uniqueId: String,
-        @Part image: MultipartBody.Part
-    ): ImageUploadResponse
-}
-
-data class ApiResponse(val status: String, val message: String)
-data class ImageUploadResponse(val status: String, val message: String, val imageUrl: String?)
-
-class InspectionViewModel(private val repository: InspectionRepository) : ViewModel() {
-
-    val allInspections: LiveData<List<Inspection>> = repository.allInspections.asLiveData()
-
-    private val unsyncedInspections = repository.unsyncedInspections.asLiveData()
-    val unsyncedCount: LiveData<Int> = unsyncedInspections.map { it.size }
-
-    private val _isNetworkAvailable = MutableLiveData<Boolean>(false)
-    val isNetworkAvailable: LiveData<Boolean> = _isNetworkAvailable
+    private val repository: InspectionRepository
+    val allInspections: LiveData<List<Inspection>>
 
     private val _syncMessage = MutableLiveData<String?>()
-    val syncMessage: LiveData<String?> = _syncMessage
+    val syncMessage: MutableLiveData<String?> get() = _syncMessage
 
-    private val GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyUcLe6tu_U0ZjK9F_qu6CnSsXNyZB3C89OjTD5gLXu5h5XxOSZRLzwZqpj-QLGJWPUxA/exec/"
 
-    private val googleAppsScriptService: GoogleAppsScriptService by lazy {
-        Retrofit.Builder()
-            .baseUrl(GOOGLE_APPS_SCRIPT_WEB_APP_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(GoogleAppsScriptService::class.java)
+    private val _isOnline = MutableLiveData<Boolean>()
+    val isOnline: LiveData<Boolean> get() = _isOnline
+
+    fun updateNetworkStatus(isAvailable: Boolean) {
+        _isOnline.value = isAvailable
     }
-
-    private var isSyncing = false
-    private var syncJob: Job? = null
 
     init {
-        _isNetworkAvailable.observeForever { available ->
-            if (available && (unsyncedCount.value ?: 0) > 0 && !isSyncing) {
-                triggerSync()
-            }
-        }
-        unsyncedInspections.observeForever { inspections ->
-            if (_isNetworkAvailable.value == true && inspections.isNotEmpty() && !isSyncing) {
-                triggerSync()
-            }
-        }
+        val inspectionDao = AppDatabase.getDatabase(application).inspectionDao()
+        repository = InspectionRepository(inspectionDao)
+        // Convierte el Flow a LiveData para usarlo en el ViewModel
+        allInspections = repository.allInspections.asLiveData()
     }
 
-    fun insertInspection(inspection: Inspection) = viewModelScope.launch(Dispatchers.IO) {
+    fun insertInspection(inspection: Inspection) = viewModelScope.launch {
         repository.insert(inspection)
-        withContext(Dispatchers.Main) {
-            if (_isNetworkAvailable.value == true && !isSyncing) {
-                triggerSync()
-            }
-        }
     }
 
-    fun updateNetworkStatus(available: Boolean) {
-        val oldStatus = _isNetworkAvailable.value
-        _isNetworkAvailable.value = available
-        if (available && oldStatus == false && (unsyncedCount.value ?: 0) > 0 && !isSyncing) {
-            triggerSync()
-        }
+    fun updateInspection(inspection: Inspection) = viewModelScope.launch {
+        repository.update(inspection)
+    }
+
+    fun deleteInspection(inspection: Inspection) = viewModelScope.launch {
+        repository.delete(inspection.id)
     }
 
     fun clearSyncMessage() {
         _syncMessage.value = null
     }
 
-    fun requestManualSync() {
-        if (!isNetworkAvailable.value!!) {
-            _syncMessage.value = "No hay conexión de red para sincronizar."
-            return
-        }
-        if (isSyncing) {
-            _syncMessage.value = "La sincronización ya está en progreso."
-            return
-        }
-        if ((unsyncedCount.value ?: 0) == 0) {
-            _syncMessage.value = "No hay inspecciones pendientes de sincronizar."
-            return
-        }
-        triggerSync()
-    }
+    /**
+     * Sincroniza las inspecciones no enviadas con Google Sheets usando Apps Script.
+     */
+    fun performSync() {
+        viewModelScope.launch(Dispatchers.IO) {
+            // Accede a la propiedad unsyncedInspections y recolecta el primer valor del Flow.
+            val unsyncedInspections = repository.unsyncedInspections.firstOrNull() ?: emptyList()
 
-    private fun triggerSync() {
-        if (isSyncing) return
-
-        syncJob?.cancel()
-        syncJob = viewModelScope.launch(Dispatchers.IO) {
-            performSync()
-        }
-    }
-
-    private suspend fun performSync() {
-        if (isSyncing) {
-            return
-        }
-        isSyncing = true
-
-        try {
-            val inspectionsToSync = repository.unsyncedInspections.firstOrNull() ?: emptyList()
-
-            if (inspectionsToSync.isEmpty()) {
+            if (unsyncedInspections.isEmpty()) {
                 withContext(Dispatchers.Main) {
                     _syncMessage.value = "No hay inspecciones pendientes de sincronizar."
                 }
-                return
-            }
-
-            withContext(Dispatchers.Main) {
-                _syncMessage.value = "Sincronizando ${inspectionsToSync.size} inspecciones..."
+                return@launch
             }
 
             var successfulSyncs = 0
             var failedSyncs = 0
 
-            for (inspection in inspectionsToSync) {
-
-                var currentInspectionFailed = false
-                val uploadedImageUrls = mutableListOf<String>()
-
-                for (imagePath in inspection.imagePaths) {
-                    val imageFile = File(imagePath)
-                    if (imageFile.exists()) {
-                        val requestFile = imageFile.asRequestBody("image/*".toMediaTypeOrNull())
-                        val imagePart = MultipartBody.Part.createFormData("image", imageFile.name, requestFile)
-
-                        try {
-                            val imageUploadResponse = googleAppsScriptService.uploadImage(
-                                uniqueId = inspection.uniqueId,
-                                image = imagePart
-                            )
-
-                            if (imageUploadResponse.status == "SUCCESS" && imageUploadResponse.imageUrl != null) {
-                                uploadedImageUrls.add(imageUploadResponse.imageUrl)
-                                imageFile.delete()
-                            } else {
-                                withContext(Dispatchers.Main) {
-                                    _syncMessage.value = "Error al subir imagen para ${inspection.articulo}: ${imageUploadResponse.message}"
-                                }
-                                currentInspectionFailed = true
-                                break
-                            }
-                        } catch (e: Exception) {
-                            withContext(Dispatchers.Main) {
-                                _syncMessage.value = "Error de red/API al subir imagen para ${inspection.articulo}: ${e.message}"
-                            }
-                            currentInspectionFailed = true
-                            break
-                        }
-                    } else {
-                        withContext(Dispatchers.Main) {
-                            _syncMessage.value = "La imagen local no existe: $imagePath para ${inspection.articulo}"
-                        }
-                    }
-                }
-
-                if (currentInspectionFailed) {
-                    failedSyncs++
-                    continue
-                }
-
+            for (inspection in unsyncedInspections) {
                 try {
-                    val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                    val inspectionDateFormatted = dateFormat.format(inspection.fecha)
-
-
-                    val apiResponse = googleAppsScriptService.uploadInspectionData(
+                    val response: ApiResponse = GoogleSheetsApi.service.addInspection(
+                        action = "addInspection",
                         uniqueId = inspection.uniqueId,
                         usuario = inspection.usuario,
-                        fecha = inspectionDateFormatted,
+                        fecha = inspection.fecha.time.toString(), // timestamp en ms
                         hojaDeRuta = inspection.hojaDeRuta,
                         tejeduria = inspection.tejeduria,
                         telar = inspection.telar,
                         tintoreria = inspection.tintoreria,
                         articulo = inspection.articulo,
                         tipoCalidad = inspection.tipoCalidad,
-                        tipoDeFalla = inspection.tipoDeFalla,
+                        tipoDeFalla = inspection.tipoDeFalla, // puede ser null
                         anchoDeRollo = inspection.anchoDeRollo,
-                        imageUrls = uploadedImageUrls.joinToString(",")
+                        imageUrls = inspection.imageUrls.joinToString(",")
                     )
 
-                    if (apiResponse.status == "SUCCESS") {
-                        val updatedInspection = inspection.copy(isSynced = true, imageUrls = uploadedImageUrls)
+                    if (response.status == "SUCCESS") {
+                        // Crea una copia de la inspección con isSynced = true
+                        val updatedInspection = inspection.copy(isSynced = true, imageUrls = emptyList())
                         repository.update(updatedInspection)
                         successfulSyncs++
                     } else {
                         withContext(Dispatchers.Main) {
-                            _syncMessage.value = "Error de sincronización para ${inspection.articulo}: ${apiResponse.message}"
+                            _syncMessage.value = "Error para ${inspection.articulo}: ${response.message}"
                         }
                         failedSyncs++
                     }
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
-                        _syncMessage.value = "Error de red/API al sincronizar datos para ${inspection.articulo}: ${e.message}"
+                        _syncMessage.value = "Error de red para ${inspection.articulo}: ${e.message}"
                     }
                     failedSyncs++
                 }
             }
 
             withContext(Dispatchers.Main) {
-                if (failedSyncs > 0) {
-                    _syncMessage.value = "Sincronización completada con algunos errores. Éxitos: $successfulSyncs, Fallos: $failedSyncs."
-                } else {
-                    _syncMessage.value = "Sincronización completada. Todas las $successfulSyncs inspecciones sincronizadas."
-                }
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                _syncMessage.value = "Error inesperado durante la sincronización: ${e.message}"
-            }
-        } finally {
-            isSyncing = false
-            withContext(Dispatchers.Main) {
-                if (_isNetworkAvailable.value == true && (unsyncedCount.value ?: 0) > 0) {
-                    triggerSync()
-                }
+                _syncMessage.value =
+                    "Sincronización completada: $successfulSyncs exitosas, $failedSyncs fallidas."
             }
         }
-    }
-}
-
-class InspectionViewModelFactory(private val repository: InspectionRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(InspectionViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return InspectionViewModel(repository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

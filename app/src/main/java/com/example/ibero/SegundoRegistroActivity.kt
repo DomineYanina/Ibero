@@ -42,51 +42,34 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        try {
-            setContentView(R.layout.activity_segundo_registro)
+        setContentView(R.layout.activity_segundo_registro)
 
-            Log.d("SegundoRegistro", "Activity started, setContentView successful.")
+        // Inicializar ViewModel
+        val database = AppDatabase.getDatabase(applicationContext)
+        val repository = InspectionRepository(database.inspectionDao())
+        val factory = InspectionViewModelFactory(application)
+        viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
-            // Inicializar ViewModel
-            val database = AppDatabase.getDatabase(applicationContext)
-            val repository = InspectionRepository(database.inspectionDao())
-            val factory = InspectionViewModelFactory(repository)
-            viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
+        // Obtener datos de la actividad anterior
+        usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
+        fecha = intent.getStringExtra("FECHA") ?: ""
+        hojaDeRuta = intent.getStringExtra("HOJA_DE_RUTA") ?: ""
+        tejeduria = intent.getStringExtra("TEJEDURIA") ?: ""
+        telar = intent.getIntExtra("TELAR", 0)
+        tintoreria = intent.getIntExtra("TINTORERIA", 0)
+        articulo = intent.getStringExtra("ARTICULO") ?: ""
 
-            // Obtener datos de la actividad anterior
-            usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
-            fecha = intent.getStringExtra("FECHA") ?: ""
-            hojaDeRuta = intent.getStringExtra("HOJA_DE_RUTA") ?: ""
-            tejeduria = intent.getStringExtra("TEJEDURIA") ?: ""
-            telar = intent.getIntExtra("TELAR", 0)
-            tintoreria = intent.getIntExtra("TINTORERIA", 0)
-            articulo = intent.getStringExtra("ARTICULO") ?: ""
-
-            Log.d("SegundoRegistro", "Datos de Intent recibidos. Telar: $telar, Tintoreria: $tintoreria")
-
-            initViews()
-            setupSpinners()
-            setupListeners()
-
-        } catch (e: Exception) {
-            val errorMessage = "Error en onCreate: ${e.message}"
-            Log.e("SegundoRegistro", errorMessage, e)
-            Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
-        }
+        initViews()
+        setupSpinners()
+        setupListeners()
     }
 
     private fun initViews() {
-        try {
-            spinnerTipoCalidad = findViewById(R.id.spinner_tipo_calidad)
-            layoutTipoDeFalla = findViewById(R.id.layout_tipo_de_falla)
-            spinnerTipoDeFalla = findViewById(R.id.spinner_tipo_de_falla)
-            editAnchoDeRollo = findViewById(R.id.edit_ancho_de_rollo)
-            btnSave = findViewById(R.id.btn_save)
-        } catch (e: Exception) {
-            val errorMessage = "Error al inicializar vistas: ${e.message}"
-            Log.e("SegundoRegistro", errorMessage, e)
-            Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
-        }
+        spinnerTipoCalidad = findViewById(R.id.spinner_tipo_calidad)
+        layoutTipoDeFalla = findViewById(R.id.layout_tipo_de_falla)
+        spinnerTipoDeFalla = findViewById(R.id.spinner_tipo_de_falla)
+        editAnchoDeRollo = findViewById(R.id.edit_ancho_de_rollo)
+        btnSave = findViewById(R.id.btn_save)
     }
 
     private fun setupSpinners() {
@@ -151,10 +134,20 @@ class SegundoRegistroActivity : AppCompatActivity() {
         )
 
         lifecycleScope.launch {
+            // Guardar localmente
             viewModel.insertInspection(newInspection)
-            Toast.makeText(this@SegundoRegistroActivity, "Inspección guardada localmente y en cola para sincronizar.", Toast.LENGTH_LONG).show()
+
+            // Mensaje único. La sync la maneja el ViewModel automáticamente.
+            Toast.makeText(
+                this@SegundoRegistroActivity,
+                "Inspección guardada. Se sincronizará en segundo plano cuando haya conexión.",
+                Toast.LENGTH_LONG
+            ).show()
+
+            // Finalizar la actividad
             finish()
         }
+
     }
 
     private fun validateForm(): Boolean {
