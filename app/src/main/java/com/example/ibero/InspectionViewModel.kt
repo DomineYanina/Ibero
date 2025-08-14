@@ -1,6 +1,7 @@
 package com.example.ibero
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.*
 import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.Inspection
@@ -56,8 +57,9 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
      */
     fun performSync() {
         viewModelScope.launch(Dispatchers.IO) {
-            // Accede a la propiedad unsyncedInspections y recolecta el primer valor del Flow.
             val unsyncedInspections = repository.unsyncedInspections.firstOrNull() ?: emptyList()
+
+            Log.d("SyncDebug", "Iniciando sincronización. Inspecciones pendientes: ${unsyncedInspections.size}")
 
             if (unsyncedInspections.isEmpty()) {
                 withContext(Dispatchers.Main) {

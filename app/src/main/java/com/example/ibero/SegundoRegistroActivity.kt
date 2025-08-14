@@ -62,6 +62,18 @@ class SegundoRegistroActivity : AppCompatActivity() {
         initViews()
         setupSpinners()
         setupListeners()
+
+        // ** NUEVA LÓGICA: Observar el estado de sincronización **
+        // Esto asegura que la actividad no se cierre hasta que la sincronización se complete
+        viewModel.syncMessage.observe(this) { message ->
+            message?.let {
+                Toast.makeText(this, it, Toast.LENGTH_LONG).show()
+                viewModel.clearSyncMessage()
+                // Una vez que se ha recibido la respuesta de sincronización (éxito o error),
+                // se puede cerrar la actividad.
+                finish()
+            }
+        }
     }
 
     private fun initViews() {
@@ -137,17 +149,12 @@ class SegundoRegistroActivity : AppCompatActivity() {
             // Guardar localmente
             viewModel.insertInspection(newInspection)
 
-            // Mensaje único. La sync la maneja el ViewModel automáticamente.
-            Toast.makeText(
-                this@SegundoRegistroActivity,
-                "Inspección guardada. Se sincronizará en segundo plano cuando haya conexión.",
-                Toast.LENGTH_LONG
-            ).show()
+            // Intentar sincronizar inmediatamente después de guardar
+            viewModel.performSync()
 
-            // Finalizar la actividad
-            finish()
+            // ** Lógica ELIMINADA: finish() **
+            // Ahora se cierra cuando se recibe una respuesta de la sincronización.
         }
-
     }
 
     private fun validateForm(): Boolean {

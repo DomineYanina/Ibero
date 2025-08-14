@@ -189,8 +189,12 @@ class MainActivity : AppCompatActivity() {
             checkCameraPermissionAndTakePicture()
         }
 
+        // El botón de guardar en esta actividad ya no hace nada.
+        // La lógica de guardado se movió a SegundoRegistroActivity.
+        // Si esta MainActivity se usa para algo más, el listener debería
+        // navegar a la siguiente pantalla.
         btnSaveInspection.setOnClickListener {
-            saveInspection()
+            Toast.makeText(this, "Esta funcionalidad ha sido movida a la pantalla de registro.", Toast.LENGTH_SHORT).show()
         }
 
         btnClearForm.setOnClickListener {
@@ -226,14 +230,6 @@ class MainActivity : AppCompatActivity() {
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     private fun observeViewModel() {
 
-        // Elimina este bloque completo
-        // viewModel.unsyncedCount.observe(this) { count ->
-        //     val currentNetworkStatus = isNetworkAvailable()
-        //     viewModel.updateNetworkStatus(currentNetworkStatus)
-        //     val networkStatusText = if (currentNetworkStatus) "Online" else "Offline"
-        //     textSyncStatus.text = "Estado: $networkStatusText | Pendientes: $count"
-        // }
-
         viewModel.allInspections.observe(this) { inspections ->
             historyAdapter.submitList(inspections)
         }
@@ -248,9 +244,7 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun setupHistoryRecyclerView() {
-        // Ahora el constructor del adaptador espera un argumento (la función de clic)
         historyAdapter = InspectionHistoryAdapter { inspection ->
-            // Usamos 'articulo' en lugar de 'articleReference'
             Toast.makeText(this, "Detalles de: ${inspection.articulo}", Toast.LENGTH_SHORT).show()
         }
         recyclerViewHistory.layoutManager = LinearLayoutManager(this)
@@ -331,7 +325,7 @@ class MainActivity : AppCompatActivity() {
                 photoFile?.also {
                     val photoURI: Uri = FileProvider.getUriForFile(
                         this,
-                        "${applicationContext.packageName}.fileprovider", // Autoridad del FileProvider
+                        "${applicationContext.packageName}.fileprovider",
                         it
                     )
                     takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
@@ -352,7 +346,7 @@ class MainActivity : AppCompatActivity() {
                 marginEnd = resources.getDimensionPixelSize(R.dimen.image_preview_margin)
             }
             scaleType = ImageView.ScaleType.CENTER_CROP
-            setBackgroundResource(R.drawable.rounded_image_background) // Fondo redondeado para la imagen
+            setBackgroundResource(R.drawable.rounded_image_background)
         }
 
         Glide.with(this)
@@ -364,33 +358,8 @@ class MainActivity : AppCompatActivity() {
         imagePreviewContainer.visibility = View.VISIBLE
     }
 
-    private fun saveInspection() {
-        // En una aplicación real, los datos se obtendrían de los campos del formulario.
-        // Aquí usamos datos de ejemplo.
-        val uniqueId = UUID.randomUUID().toString() // Generar un uniqueId
-
-        val newInspection = Inspection(
-            usuario = "Juan Perez",
-            fecha = Date(), // Fecha actual
-            hojaDeRuta = "HR-12345",
-            tejeduria = "Tejeduria A",
-            telar = 101,
-            tintoreria = 500,
-            articulo = "Articulo-XY",
-            tipoCalidad = "Primera",
-            tipoDeFalla = null, // null para "Primera" calidad
-            anchoDeRollo = 1.5,
-            imagePaths = emptyList(),
-            imageUrls = emptyList(),
-            uniqueId = uniqueId // Pasar el uniqueId al constructor
-        )
-
-        // Guardar la inspección en la base de datos a través del ViewModel
-        lifecycleScope.launch {
-            viewModel.insertInspection(newInspection)
-            Toast.makeText(this@MainActivity, "Inspección de prueba guardada.", Toast.LENGTH_SHORT).show()
-        }
-    }
+    // El método saveInspection() fue eliminado de esta clase.
+    // La lógica de guardado y sincronización ahora reside en SegundoRegistroActivity.
 
     private fun validateForm(): Boolean {
         var isValid = true
@@ -442,12 +411,12 @@ class MainActivity : AppCompatActivity() {
         editColor.setText("")
         editTotalLotQuantity.setText("")
         editSampleQuantity.setText("")
-        spinnerDefectType.setText("", false) // Limpiar texto y no seleccionar nada
+        spinnerDefectType.setText("", false)
         layoutOtherDefect.visibility = View.GONE
         editOtherDefectDescription.setText("")
         editDefectiveItemsQuantity.setText("")
         editDefectDescription.setText("")
-        spinnerActionTaken.setText("", false) // Limpiar texto y no seleccionar nada
+        spinnerActionTaken.setText("", false)
 
         imagePreviewContainer.removeAllViews()
         imagePreviewContainer.visibility = View.GONE
@@ -482,6 +451,11 @@ class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onResume() {
         super.onResume()
-        viewModel.updateNetworkStatus(isNetworkAvailable())
+        val isAvailable = isNetworkAvailable()
+        viewModel.updateNetworkStatus(isAvailable)
+
+        if (isAvailable) {
+            viewModel.performSync()
+        }
     }
 }
