@@ -25,15 +25,15 @@ class PrimerRegistroActivity : AppCompatActivity() {
     private lateinit var spinnerTelar: AutoCompleteTextView
     private lateinit var editTintoreria: EditText
     private lateinit var spinnerArticulo: AutoCompleteTextView
-    private lateinit var editColor: EditText // Nuevo
-    private lateinit var editRolloDeUrdido: EditText // Nuevo
-    private lateinit var editOrden: EditText // Nuevo
-    private lateinit var editCadena: EditText // Nuevo
-    private lateinit var editAnchoDeRollo: EditText // Nuevo
-    private lateinit var spinnerEsmerilado: AutoCompleteTextView // Nuevo
-    private lateinit var spinnerIgnifugo: AutoCompleteTextView // Nuevo
-    private lateinit var spinnerImpermeable: AutoCompleteTextView // Nuevo
-    private lateinit var editOtro: EditText // Nuevo
+    private lateinit var editColor: EditText
+    private lateinit var editRolloDeUrdido: EditText
+    private lateinit var editOrden: EditText
+    private lateinit var editCadena: EditText
+    private lateinit var editAnchoDeRollo: EditText
+    private lateinit var editEsmerilado: EditText // Modificado a EditText
+    private lateinit var editIgnifugo: EditText // Modificado a EditText
+    private lateinit var editImpermeable: EditText // Modificado a EditText
+    private lateinit var editOtro: EditText
     private lateinit var btnNext: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,15 +56,15 @@ class PrimerRegistroActivity : AppCompatActivity() {
         spinnerTelar = findViewById(R.id.spinner_telar)
         editTintoreria = findViewById(R.id.edit_tintoreria)
         spinnerArticulo = findViewById(R.id.spinner_articulo)
-        editColor = findViewById(R.id.edit_color) // Nuevo
-        editRolloDeUrdido = findViewById(R.id.edit_rollo_de_urdido) // Nuevo
-        editOrden = findViewById(R.id.edit_orden) // Nuevo
-        editCadena = findViewById(R.id.edit_cadena) // Nuevo
-        editAnchoDeRollo = findViewById(R.id.edit_ancho_de_rollo) // Nuevo
-        spinnerEsmerilado = findViewById(R.id.spinner_esmerilado) // Nuevo
-        spinnerIgnifugo = findViewById(R.id.spinner_ignifugo) // Nuevo
-        spinnerImpermeable = findViewById(R.id.spinner_impermeable) // Nuevo
-        editOtro = findViewById(R.id.edit_otro) // Nuevo
+        editColor = findViewById(R.id.edit_color)
+        editRolloDeUrdido = findViewById(R.id.edit_rollo_de_urdido)
+        editOrden = findViewById(R.id.edit_orden)
+        editCadena = findViewById(R.id.edit_cadena)
+        editAnchoDeRollo = findViewById(R.id.edit_ancho_de_rollo)
+        editEsmerilado = findViewById(R.id.edit_esmerilado) // Modificado a EditText
+        editIgnifugo = findViewById(R.id.edit_ignifugo) // Modificado a EditText
+        editImpermeable = findViewById(R.id.edit_impermeable) // Modificado a EditText
+        editOtro = findViewById(R.id.edit_otro)
         btnNext = findViewById(R.id.btn_next)
 
         textUsuario.text = "Usuario: $loggedInUser"
@@ -87,12 +87,7 @@ class PrimerRegistroActivity : AppCompatActivity() {
         val articuloAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, articuloOptions)
         spinnerArticulo.setAdapter(articuloAdapter)
 
-        // Spinners para Esmerilado, Ignifugo e Impermeable
-        val siNoOptions = arrayOf("Sí", "No")
-        val siNoAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, siNoOptions)
-        spinnerEsmerilado.setAdapter(siNoAdapter)
-        spinnerIgnifugo.setAdapter(siNoAdapter)
-        spinnerImpermeable.setAdapter(siNoAdapter)
+        // Ya no se configuran los adaptadores para los campos que ahora son de texto libre
     }
 
     private fun setupListeners() {
@@ -106,10 +101,10 @@ class PrimerRegistroActivity : AppCompatActivity() {
 
                 val telarValue = spinnerTelar.text.toString().toIntOrNull() ?: 0
                 val tintoreriaValue = editTintoreria.text.toString().toIntOrNull() ?: 0
-                val colorValue = editColor.text.toString().toIntOrNull() ?: 0 // Nuevo
-                val rolloUrdidoValue = editRolloDeUrdido.text.toString().toIntOrNull() ?: 0 // Nuevo
-                val cadenaValue = editCadena.text.toString().toIntOrNull() ?: 0 // Nuevo
-                val anchoRolloValue = editAnchoDeRollo.text.toString().toIntOrNull() ?: 0 // Nuevo
+                val colorValue = editColor.text.toString().toIntOrNull() ?: 0
+                val rolloUrdidoValue = editRolloDeUrdido.text.toString().toIntOrNull() ?: 0
+                val cadenaValue = editCadena.text.toString().toIntOrNull() ?: 0
+                val anchoRolloValue = editAnchoDeRollo.text.toString().toIntOrNull() ?: 0
 
                 intent.putExtra("LOGGED_IN_USER", loggedInUser)
                 intent.putExtra("FECHA", editFecha.text.toString())
@@ -118,15 +113,15 @@ class PrimerRegistroActivity : AppCompatActivity() {
                 intent.putExtra("TELAR", telarValue)
                 intent.putExtra("TINTORERIA", tintoreriaValue)
                 intent.putExtra("ARTICULO", spinnerArticulo.text.toString())
-                intent.putExtra("COLOR", colorValue) // Nuevo
-                intent.putExtra("ROLLO_DE_URDIDO", rolloUrdidoValue) // Nuevo
-                intent.putExtra("ORDEN", editOrden.text.toString()) // Nuevo
-                intent.putExtra("CADENA", cadenaValue) // Nuevo
-                intent.putExtra("ANCHO_DE_ROLLO", anchoRolloValue) // Nuevo
-                intent.putExtra("ESMERILADO", spinnerEsmerilado.text.toString()) // Nuevo
-                intent.putExtra("IGNIFUGO", spinnerIgnifugo.text.toString()) // Nuevo
-                intent.putExtra("IMPERMEABLE", spinnerImpermeable.text.toString()) // Nuevo
-                intent.putExtra("OTRO", editOtro.text.toString()) // Nuevo
+                intent.putExtra("COLOR", colorValue)
+                intent.putExtra("ROLLO_DE_URDIDO", rolloUrdidoValue)
+                intent.putExtra("ORDEN", editOrden.text.toString())
+                intent.putExtra("CADENA", cadenaValue)
+                intent.putExtra("ANCHO_DE_ROLLO", anchoRolloValue)
+                intent.putExtra("ESMERILADO", editEsmerilado.text.toString()) // Ahora se obtiene de EditText
+                intent.putExtra("IGNIFUGO", editIgnifugo.text.toString()) // Ahora se obtiene de EditText
+                intent.putExtra("IMPERMEABLE", editImpermeable.text.toString()) // Ahora se obtiene de EditText
+                intent.putExtra("OTRO", editOtro.text.toString())
 
                 startActivity(intent)
             } else {
@@ -167,11 +162,11 @@ class PrimerRegistroActivity : AppCompatActivity() {
         val requiredEditTexts = listOf(
             R.id.edit_hoja_de_ruta to "Hoja de Ruta es obligatoria",
             R.id.edit_tintoreria to "Tintoreria es obligatoria",
-            R.id.edit_color to "Color es obligatorio", // Nuevo
-            R.id.edit_rollo_de_urdido to "Rollo de urdido es obligatorio", // Nuevo
-            R.id.edit_orden to "Orden es obligatoria", // Nuevo
-            R.id.edit_cadena to "Cadena es obligatoria", // Nuevo
-            R.id.edit_ancho_de_rollo to "Ancho de rollo es obligatorio", // Nuevo
+            R.id.edit_color to "Color es obligatorio",
+            R.id.edit_rollo_de_urdido to "Rollo de urdido es obligatorio",
+            R.id.edit_orden to "Orden es obligatoria",
+            R.id.edit_cadena to "Cadena es obligatoria",
+            R.id.edit_ancho_de_rollo to "Ancho de rollo es obligatorio"
         )
 
         for ((id, message) in requiredEditTexts) {
@@ -187,10 +182,7 @@ class PrimerRegistroActivity : AppCompatActivity() {
         val requiredSpinners = listOf(
             R.id.spinner_tejeduria to "Tejeduria es obligatoria",
             R.id.spinner_telar to "Telar es obligatorio",
-            R.id.spinner_articulo to "Artículo es obligatorio",
-            R.id.spinner_esmerilado to "Esmerilado es obligatorio", // Nuevo
-            R.id.spinner_ignifugo to "Ignifugo es obligatorio", // Nuevo
-            R.id.spinner_impermeable to "Impermeable es obligatorio" // Nuevo
+            R.id.spinner_articulo to "Artículo es obligatorio"
         )
 
         for ((id, message) in requiredSpinners) {
@@ -219,9 +211,10 @@ class PrimerRegistroActivity : AppCompatActivity() {
             R.id.edit_orden -> R.id.layout_orden
             R.id.edit_cadena -> R.id.layout_cadena
             R.id.edit_ancho_de_rollo -> R.id.layout_ancho_de_rollo
-            R.id.spinner_esmerilado -> R.id.layout_esmerilado
-            R.id.spinner_ignifugo -> R.id.layout_ignifugo
-            R.id.spinner_impermeable -> R.id.layout_impermeable
+            R.id.edit_esmerilado -> R.id.layout_esmerilado
+            R.id.edit_ignifugo -> R.id.layout_ignifugo
+            R.id.edit_impermeable -> R.id.layout_impermeable
+            R.id.edit_otro -> R.id.layout_otro
             else -> throw IllegalArgumentException("Unknown child ID")
         }
     }
