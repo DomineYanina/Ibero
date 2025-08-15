@@ -15,21 +15,21 @@
             android:padding="16dp">
 
         <TextView
-                android:id="@+id/text_view_item_articulo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Artículo: ART-123"
-                android:textAppearance="?attr/textAppearanceListItem"
-                android:textSize="16sp"
-                android:textStyle="bold"/>
-
-        <TextView
                 android:id="@+id/text_view_item_calidad"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Calidad: Primera"
                 android:textAppearance="?attr/textAppearanceListItemSecondary"/>
+
+        <TextView
+                android:id="@+id/text_view_item_falla"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Falla: Falla de trama"
+                android:textAppearance="?attr/textAppearanceListItemSecondary"
+                android:visibility="gone" />
 
         <TextView
                 android:id="@+id/text_view_item_metros"

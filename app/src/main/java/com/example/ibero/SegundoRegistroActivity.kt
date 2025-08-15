@@ -7,6 +7,7 @@ import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
@@ -35,6 +36,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
     private lateinit var recyclerViewCurrentSessionRecords: RecyclerView
     private lateinit var currentSessionInspectionAdapter: CurrentSessionInspectionAdapter
+    private lateinit var textSessionTitle: TextView // Nueva variable para el título dinámico
 
     // Datos de la primera pantalla que se mantienen
     private lateinit var usuario: String
@@ -43,7 +45,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var tejeduria: String
     private var telar: Int = 0
     private var tintoreria: Int = 0
-    private lateinit var articulo: String
+    private lateinit var articulo: String // Se mantiene para usarlo en el título
     private var color: Int = 0
     private var rolloDeUrdido: Int = 0
     private lateinit var orden: String
@@ -84,6 +86,9 @@ class SegundoRegistroActivity : AppCompatActivity() {
         setupListeners()
         setupCurrentSessionRecyclerView()
 
+        // Actualizar el título con el artículo
+        textSessionTitle.text = "Registros ingresados para el artículo: $articulo"
+
         // Observa los mensajes de sincronización del ViewModel para mostrarlos al usuario
         viewModel.syncMessage.observe(this) { message ->
             message?.let {
@@ -106,6 +111,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         btnGuardarRegistro = findViewById(R.id.btn_guardar_registro)
         btnIncorporar = findViewById(R.id.btn_incorporar)
         recyclerViewCurrentSessionRecords = findViewById(R.id.recycler_view_current_session_records)
+        textSessionTitle = findViewById(R.id.text_session_title) // Inicializar la nueva variable
     }
 
     private fun setupSpinners() {

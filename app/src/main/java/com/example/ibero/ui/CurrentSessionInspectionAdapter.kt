@@ -13,8 +13,8 @@ class CurrentSessionInspectionAdapter(
 ) : RecyclerView.Adapter<CurrentSessionInspectionAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val articuloTextView: TextView = view.findViewById(R.id.text_view_item_articulo)
         val calidadTextView: TextView = view.findViewById(R.id.text_view_item_calidad)
+        val fallaTextView: TextView = view.findViewById(R.id.text_view_item_falla) // Nueva referencia
         val metrosTextView: TextView = view.findViewById(R.id.text_view_item_metros)
     }
 
@@ -26,9 +26,17 @@ class CurrentSessionInspectionAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val inspection = inspections[position]
-        holder.articuloTextView.text = "Artículo: ${inspection.articulo}"
+
         holder.calidadTextView.text = "Calidad: ${inspection.tipoCalidad}"
         holder.metrosTextView.text = "Metros: ${inspection.metrosDeTela}"
+
+        // Lógica para mostrar u ocultar el tipo de falla
+        if (inspection.tipoCalidad == "Segunda" && inspection.tipoDeFalla != null) {
+            holder.fallaTextView.visibility = View.VISIBLE
+            holder.fallaTextView.text = "Falla: ${inspection.tipoDeFalla}"
+        } else {
+            holder.fallaTextView.visibility = View.GONE
+        }
     }
 
     override fun getItemCount(): Int = inspections.size

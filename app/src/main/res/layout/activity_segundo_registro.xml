@@ -101,10 +101,11 @@
             android:padding="16dp">
 
         <TextView
+                android:id="@+id/text_session_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Registros ingresados en esta sesión:"
+                tools:text="Registros ingresados para el artículo: 3080P"
                 android:textAppearance="?attr/textAppearanceListItem"
                 android:textStyle="bold" />
 
