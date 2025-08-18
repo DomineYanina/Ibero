@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.lifecycle.*
 import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.Inspection
-import com.example.ibero.data.network.ApiResponse
+import com.example.ibero.data.network.AddInspectionResponse // AÑADIDO: Nuevo modelo de respuesta
 import com.example.ibero.data.network.GoogleSheetsApi
 import com.example.ibero.repository.InspectionRepository
 import kotlinx.coroutines.Dispatchers
@@ -95,7 +95,7 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
 
     /**
      * Sincroniza las inspecciones no enviadas con Google Sheets.
-     * Es llamada por los observadores de red y de base de datos.
+     * Esta función solo se encarga de reintentar las subidas fallidas.
      */
     fun performSync() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -114,23 +114,26 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
 
                 val unsyncedInspections = repository.getUnsyncedInspectionsOnce()
 
-                Log.d("SyncDebug", "Iniciando sincronización. Inspecciones pendientes: ${unsyncedInspections.size}")
-
                 if (unsyncedInspections.isEmpty()) {
                     withContext(Dispatchers.Main) {
                         _syncMessage.value = "No hay inspecciones pendientes de sincronizar."
                     }
+                    // Al final de la función, restablecer el estado de carga a false
+                    withContext(Dispatchers.Main) {
+                        _isLoading.value = false
+                    }
                     return@withLock
                 }
+
+                Log.d("SyncDebug", "Iniciando sincronización. Inspecciones pendientes: ${unsyncedInspections.size}")
 
                 var successfulSyncs = 0
                 var failedSyncs = 0
 
                 for (inspection in unsyncedInspections) {
                     try {
-                        val response: ApiResponse = GoogleSheetsApi.service.addInspection(
+                        val response: AddInspectionResponse = GoogleSheetsApi.service.addInspection(
                             action = "addInspection",
-                            uniqueId = inspection.uniqueId,
                             usuario = inspection.usuario,
                             fecha = inspection.fecha.time.toString(),
                             hojaDeRuta = inspection.hojaDeRuta,
@@ -153,8 +156,10 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                             imageUrls = inspection.imageUrls.joinToString(",")
                         )
 
-                        if (response.status == "SUCCESS") {
-                            val updatedInspection = inspection.copy(isSynced = true, imageUrls = emptyList())
+                        if (response.status == "SUCCESS" && response.data.uniqueId != null) {
+                            val newUniqueId = response.data.uniqueId
+                            // Crear un nuevo objeto con el ID del servidor y la bandera de sincronización
+                            val updatedInspection = inspection.copy(uniqueId = newUniqueId, isSynced = true, imageUrls = emptyList())
                             repository.update(updatedInspection)
                             successfulSyncs++
                         } else {
@@ -185,42 +190,65 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
 
     /**
      * Inserta una inspección y la sube inmediatamente a Google Sheets.
-     * Se usa para el botón "Finalizar" para asegurar la subida antes de cerrar la pantalla.
+     * Si la subida es exitosa, actualiza el registro localmente.
+     * Si falla, simplemente lo guarda localmente para su futura sincronización.
      */
     suspend fun finalizeAndSync(inspection: Inspection): Boolean {
-        // Establecer el estado de carga al iniciar
         withContext(Dispatchers.Main) {
             _isLoading.value = true
         }
 
-        // La lógica de la subida real está en `performSync` para evitar duplicación.
-        // Aquí solo nos encargamos de insertar y esperar.
+        try {
+            val response: AddInspectionResponse = GoogleSheetsApi.service.addInspection(
+                action = "addInspection",
+                usuario = inspection.usuario,
+                fecha = inspection.fecha.time.toString(),
+                hojaDeRuta = inspection.hojaDeRuta,
+                tejeduria = inspection.tejeduria,
+                telar = inspection.telar,
+                tintoreria = inspection.tintoreria,
+                articulo = inspection.articulo,
+                color = inspection.color,
+                rolloDeUrdido = inspection.rolloDeUrdido,
+                orden = inspection.orden,
+                cadena = inspection.cadena,
+                anchoDeRollo = inspection.anchoDeRollo,
+                esmerilado = inspection.esmerilado,
+                ignifugo = inspection.ignifugo,
+                impermeable = inspection.impermeable,
+                otro = inspection.otro,
+                tipoCalidad = inspection.tipoCalidad,
+                tipoDeFalla = inspection.tipoDeFalla,
+                metrosDeTela = inspection.metrosDeTela,
+                imageUrls = inspection.imageUrls.joinToString(",")
+            )
 
-        // 1. Insertar el registro localmente.
-        repository.insert(inspection)
-
-        // 2. Ejecutar la sincronización de todos los pendientes, incluyendo el nuevo.
-        performSync()
-
-        // Esperamos a que la sincronización termine.
-        // Se espera a que el número de registros no sincronizados disminuya.
-        val unsyncedSizeBefore = repository.getUnsyncedInspectionsOnce().size
-        var unsyncedSizeAfter = unsyncedSizeBefore
-        var waitAttempts = 0
-        while (unsyncedSizeAfter >= unsyncedSizeBefore && waitAttempts < 5) {
-            kotlinx.coroutines.delay(500) // Esperar 500ms
-            unsyncedSizeAfter = repository.getUnsyncedInspectionsOnce().size
-            waitAttempts++
+            if (response.status == "SUCCESS" && response.data.uniqueId != null) {
+                val newUniqueId = response.data.uniqueId
+                // Se actualiza el registro localmente con el ID y el estado de sincronización.
+                val updatedInspection = inspection.copy(uniqueId = newUniqueId, isSynced = true, imageUrls = emptyList())
+                repository.insert(updatedInspection) // Reemplaza la inserción original
+                withContext(Dispatchers.Main) {
+                    _isLoading.value = false
+                }
+                return true // Éxito
+            } else {
+                // Si falla la API, el registro se mantiene en la base de datos local
+                // con isSynced = false para que se reintente en el próximo performSync.
+                repository.insert(inspection)
+                withContext(Dispatchers.Main) {
+                    _isLoading.value = false
+                }
+                return false // Fallo
+            }
+        } catch (e: Exception) {
+            // Si hay un error de conexión, se inserta el registro en la base de datos local
+            repository.insert(inspection)
+            withContext(Dispatchers.Main) {
+                _isLoading.value = false
+            }
+            Log.e("ViewModel", "Error al finalizar y sincronizar", e)
+            return false // Fallo
         }
-
-        // Si el tamaño después es menor, significa que al menos un registro se subió.
-        val success = unsyncedSizeAfter < unsyncedSizeBefore
-
-        // Al final de la función, restablecer el estado de carga a false
-        withContext(Dispatchers.Main) {
-            _isLoading.value = false
-        }
-
-        return success
     }
 }

@@ -9,9 +9,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.ibero.data.TonalidadItem
 import com.example.ibero.data.network.GoogleSheetsApi
+import com.example.ibero.data.network.TonalidadesResponse
 import com.example.ibero.ui.TonalidadesAdapter
+import com.example.ibero.data.TonalidadItem // Importa el modelo de la capa UI
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -70,24 +71,19 @@ class TonalidadesActivity : AppCompatActivity() {
                 val response = GoogleSheetsApi.service.findTonalidades(hojaDeRuta = hojaRuta)
 
                 withContext(Dispatchers.Main) {
-                    if (response.status == "success") {
-                        val items = response.data.map {
-                            // Mapea la respuesta de la API a tu modelo de datos local (TonalidadItem)
+                    if (response.status == "success" && !response.data.isNullOrEmpty()) {
+                        // Mapea la respuesta de la API a tu modelo de datos de la UI
+                        val uiItems = response.data!!.map { dataItem ->
                             TonalidadItem(
-                                uniqueId = it.rowNumber.toString(), // Usamos el número de fila como ID
-                                valorColumnaT = it.valorColumnaT
+                                uniqueId = dataItem.rowNumber.toString(), // Usamos el número de fila como ID
+                                valorColumnaT = dataItem.valorColumnaT
                             )
                         }
 
-                        if (items.isEmpty()) {
-                            Toast.makeText(this@TonalidadesActivity, "No se encontraron registros para esa hoja de ruta.", Toast.LENGTH_LONG).show()
-                            adapter.updateList(mutableListOf())
-                            btnGuardar.visibility = View.GONE
-                        } else {
-                            adapter.updateList(items.toMutableList())
-                            btnGuardar.visibility = View.VISIBLE
-                        }
+                        adapter.updateList(uiItems.toMutableList())
+                        btnGuardar.visibility = View.VISIBLE
                     } else {
+                        // Usa el campo 'message' que ahora existe en TonalidadesResponse
                         Toast.makeText(this@TonalidadesActivity, "Error en la búsqueda: ${response.message}", Toast.LENGTH_LONG).show()
                         adapter.updateList(mutableListOf())
                         btnGuardar.visibility = View.GONE

@@ -107,14 +107,16 @@ class PrimerRegistroActivity : AppCompatActivity() {
 
                 intent.putExtra("LOGGED_IN_USER", loggedInUser)
                 intent.putExtra("FECHA", editFecha.text.toString())
-                intent.putExtra("HOJA_DE_RUTA", formatHojaDeRuta(editHojaDeRuta.text.toString()))
+                intent.putExtra("HOJA_DE_RUTA", editHojaDeRuta.text.toString())
+                //intent.putExtra("HOJA_DE_RUTA", formatHojaDeRuta(editHojaDeRuta.text.toString()))
                 intent.putExtra("TEJEDURIA", spinnerTejeduria.text.toString())
                 intent.putExtra("TELAR", telarValue)
                 intent.putExtra("TINTORERIA", tintoreriaValue)
                 intent.putExtra("ARTICULO", spinnerArticulo.text.toString())
                 intent.putExtra("COLOR", colorValue)
                 intent.putExtra("ROLLO_DE_URDIDO", rolloUrdidoValue)
-                intent.putExtra("ORDEN", editOrden.text.toString())
+                intent.putExtra("ORDEN", formatHojaDeRuta(editOrden.text.toString()))
+                //intent.putExtra("ORDEN", editOrden.text.toString())
                 intent.putExtra("CADENA", cadenaValue)
                 intent.putExtra("ANCHO_DE_ROLLO", anchoRolloValue)
                 intent.putExtra("ESMERILADO", editEsmerilado.text.toString()) // Ahora se obtiene de EditText
@@ -151,9 +153,11 @@ class PrimerRegistroActivity : AppCompatActivity() {
     }
 
     private fun formatHojaDeRuta(hojaDeRutaInput: String): String {
+        // No se usa padStart para no agregar ceros al inicio
+        val cleanedInput = hojaDeRutaInput.trim() // Opcional: limpiar espacios en blanco
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR).toString().takeLast(2)
-        return "${hojaDeRutaInput.padStart(2, '0')}-a$year"
+        return "$cleanedInput-a$year"
     }
 
     private fun validateForm(): Boolean {

@@ -1,5 +1,6 @@
 package com.example.ibero.data.network
 
+import com.google.gson.annotations.SerializedName
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -9,21 +10,29 @@ import retrofit2.http.FormUrlEncoded
 import retrofit2.http.POST
 import java.util.concurrent.TimeUnit
 
-// Debe corresponder al JSON que devuelve tu Apps Script.
-data class ApiResponse(val status: String, val message: String)
+// Modelos de datos para la nueva respuesta de addInspection
+data class AddInspectionResponse(
+    @SerializedName("status")
+    val status: String,
+    @SerializedName("message")
+    val message: String?,
+    @SerializedName("data")
+    val data: AddInspectionData
+)
 
-// Nuevo objeto de respuesta para la búsqueda de tonalidades
+data class AddInspectionData(
+    @SerializedName("uniqueId")
+    val uniqueId: String?
+)
+
+// Modelo de datos para la respuesta de la búsqueda de tonalidades
 data class TonalidadesResponse(
     val status: String,
-    val data: List<TonalidadResponseItem>
-) {
-    val message: String
-        get() {
-            TODO()
-        }
-}
+    val message: String?, // Ahora el mensaje puede ser nulo en caso de éxito
+    val data: List<TonalidadResponseItem>?
+)
 
-// Nuevo modelo de datos para los ítems de la respuesta de búsqueda
+// Modelo de datos para los ítems de la respuesta de búsqueda
 data class TonalidadResponseItem(
     val valorColumnaT: String,
     val rowNumber: Int // El número de fila es clave para la actualización
@@ -31,10 +40,10 @@ data class TonalidadResponseItem(
 
 interface GoogleAppsScriptService {
     @FormUrlEncoded
-    @POST("exec") // ¡Ojo! Aquí va "exec"
+    @POST("exec")
     suspend fun addInspection(
         @Field("action") action: String = "addInspection",
-        @Field("uniqueId") uniqueId: String,
+        // Campo 'uniqueId' ELIMINADO. Ahora lo devuelve el servidor.
         @Field("usuario") usuario: String,
         @Field("fecha") fecha: String,
         @Field("hojaDeRuta") hojaDeRuta: String,
@@ -47,15 +56,15 @@ interface GoogleAppsScriptService {
         @Field("orden") orden: String,
         @Field("cadena") cadena: Int,
         @Field("anchoDeRollo") anchoDeRollo: Int,
-        @Field("esmerilado") esmerilado: String,
-        @Field("ignifugo") ignifugo: String,
-        @Field("impermeable") impermeable: String,
-        @Field("otro") otro: String,
-        @Field("tipoCalidad") tipoCalidad: String,
+        @Field("esmerilado") esmerilado: String?,
+        @Field("ignifugo") ignifugo: String?,
+        @Field("impermeable") impermeable: String?,
+        @Field("otro") otro: String?,
+        @Field("tipoCalidad") tipoCalidad: String?,
         @Field("tipoDeFalla") tipoDeFalla: String?,
         @Field("metrosDeTela") metrosDeTela: Double,
         @Field("imageUrls") imageUrls: String
-    ): ApiResponse
+    ): AddInspectionResponse
 
     @FormUrlEncoded
     @POST("exec")
@@ -77,7 +86,7 @@ object GoogleSheetsApi {
      * Pega aquí la URL de despliegue de tu Apps Script PERO sin el "/exec" final.
      */
     private const val BASE_URL =
-        "https://script.google.com/macros/s/AKfycbyR1hqIeKK245cv4Wm_cMPa8LG0bg5z0HqYMnXd8LlAuO7agjbDUlBKlMfVuMCEFLhHDA/"
+        "https://script.google.com/macros/s/AKfycbxTONND5KQtyhwqCm_HwN5yz57MsxJjsU_XikpY1jGcioqgJxdapG7ztDSB7so14Az3dQ/"
 
     val service: GoogleAppsScriptService by lazy {
         val logging = HttpLoggingInterceptor().apply {
