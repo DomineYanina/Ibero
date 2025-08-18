@@ -51,7 +51,7 @@ object GoogleSheetsApi {
      * https://script.google.com/macros/s/AKfycb.../
      */
     private const val BASE_URL =
-        "https://script.google.com/macros/s/AKfycbxdCJf76Z_5dG9BVhc58P8m0a2Y6nSc8h8dmWa49QlM9Qr303jutNuWoZgAFWLR2QPLrw/"
+        "https://script.google.com/macros/s/AKfycbzBVYUCujiDnPzC8rPvUnXsbAwvowq16p58_NfCLl2kxjXH88Tg-S5CC8iU9wjefGAqyg/"
 
     val service: GoogleAppsScriptService by lazy {
         val logging = HttpLoggingInterceptor().apply {
