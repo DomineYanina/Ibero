@@ -175,16 +175,29 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private fun saveInspectionAndFinalize() {
         val inspection = createInspectionObject()
         lifecycleScope.launch {
-            viewModel.insertInspection(inspection)
-            viewModel.performSync()
 
-            // Limpiar la lista de registros de la sesión antes de finalizar
+            // Llamar a la nueva función suspendida y esperar su resultado
+            val success = viewModel.insertAndSync(inspection)
+
+            // Limpiar la lista de registros de la sesión
             viewModel.clearCurrentSessionList()
 
-            val intent = Intent(this@SegundoRegistroActivity, MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-            startActivity(intent)
-            finish()
+            if (success) {
+                // El registro se subió, ahora podemos redirigir.
+                Toast.makeText(this@SegundoRegistroActivity, "Registro subido y finalizado.", Toast.LENGTH_SHORT).show()
+                val intent = Intent(this@SegundoRegistroActivity, MainActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(intent)
+                finish()
+            } else {
+                // La subida a la nube falló, pero el registro se guardó localmente.
+                // Aún podemos redirigir, pero con un mensaje de advertencia.
+                Toast.makeText(this@SegundoRegistroActivity, "No se pudo subir a la nube. Guardado localmente. Finalizando.", Toast.LENGTH_LONG).show()
+                val intent = Intent(this@SegundoRegistroActivity, MainActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(intent)
+                finish()
+            }
         }
     }
 
