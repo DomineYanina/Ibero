@@ -230,6 +230,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
             }
 
             val intent = Intent(this@SegundoRegistroActivity, HomeActivity::class.java)
+            intent.putExtra("LOGGED_IN_USER", usuario)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
             startActivity(intent)
             finish()
