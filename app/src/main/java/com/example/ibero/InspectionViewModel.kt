@@ -9,7 +9,6 @@ import com.example.ibero.data.network.ApiResponse
 import com.example.ibero.data.network.GoogleSheetsApi
 import com.example.ibero.repository.InspectionRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -30,6 +29,10 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
     private val _currentSessionInspections = MutableLiveData<MutableList<Inspection>>(mutableListOf())
     val currentSessionInspections: LiveData<MutableList<Inspection>> get() = _currentSessionInspections
 
+    // LiveData para el estado de carga
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> get() = _isLoading
+
     // Mutex para asegurar que solo una sincronización se ejecute a la vez
     private val syncMutex = Mutex()
 
@@ -38,7 +41,7 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         repository = InspectionRepository(inspectionDao)
         allInspections = repository.allInspections.asLiveData()
 
-        // 1. Observar el estado de la red para iniciar sincronización
+        // Observar el estado de la red para iniciar sincronización
         viewModelScope.launch {
             connectivityObserver.observe()
             connectivityObserver.connectionStatus.collectLatest { status ->
@@ -49,12 +52,12 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
             }
         }
 
-        // 2. Observar la lista de inspecciones no sincronizadas para iniciar sincronización
+        // Observar la lista de inspecciones no sincronizadas para iniciar sincronización
         viewModelScope.launch {
             repository.unsyncedInspections
                 .map { it.isNotEmpty() }
                 .distinctUntilChanged()
-                .collect { hasUnsynced ->
+                .collectLatest { hasUnsynced ->
                     if (hasUnsynced) {
                         Log.d("SyncDebug", "Nuevas inspecciones pendientes detectadas. Iniciando sincronización...")
                         performSync()
@@ -63,9 +66,6 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    /**
-     * Inserta una nueva inspección en la base de datos local y la agrega a la lista de la sesión actual.
-     */
     fun insertInspection(inspection: Inspection) = viewModelScope.launch {
         repository.insert(inspection)
         addInspectionToSessionList(inspection)
@@ -94,11 +94,16 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     /**
-     * Sincroniza las inspecciones no enviadas con Google Sheets usando Apps Script.
-     * Asegura que solo una sincronización se ejecute a la vez.
+     * Sincroniza las inspecciones no enviadas con Google Sheets.
+     * Es llamada por los observadores de red y de base de datos.
      */
     fun performSync() {
         viewModelScope.launch(Dispatchers.IO) {
+            // Establecer el estado de carga al iniciar
+            withContext(Dispatchers.Main) {
+                _isLoading.value = true
+            }
+
             syncMutex.withLock {
                 if (!connectivityObserver.hasInternet()) {
                     withContext(Dispatchers.Main) {
@@ -171,76 +176,51 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                     _syncMessage.value = "Sincronización completada: $successfulSyncs exitosas, $failedSyncs fallidas."
                 }
             }
+            // Al final de la función, restablecer el estado de carga a false
+            withContext(Dispatchers.Main) {
+                _isLoading.value = false
+            }
         }
     }
 
     /**
-     * Inserta una inspección y la sincroniza inmediatamente con Google Sheets.
-     * Esta función se utiliza para el botón "Finalizar".
-     * @return True si la inserción y la sincronización fueron exitosas, false en caso contrario.
+     * Inserta una inspección y la sube inmediatamente a Google Sheets.
+     * Se usa para el botón "Finalizar" para asegurar la subida antes de cerrar la pantalla.
      */
-    suspend fun insertAndSync(inspection: Inspection): Boolean {
-        // La lógica se ejecuta dentro de un lock para evitar concurrencia
-        return syncMutex.withLock {
-            try {
-                // 1. Insertar el registro localmente.
-                repository.insert(inspection)
-
-                // 2. Verificar la conexión a Internet. Si no hay, la subida no es posible.
-                if (!connectivityObserver.hasInternet()) {
-                    withContext(Dispatchers.Main) {
-                        _syncMessage.value = "No hay conexión a Internet. El registro se guardó localmente."
-                    }
-                    return@withLock false
-                }
-
-                // 3. Subir el registro a Google Sheets.
-                val response: ApiResponse = GoogleSheetsApi.service.addInspection(
-                    action = "addInspection",
-                    uniqueId = inspection.uniqueId,
-                    usuario = inspection.usuario,
-                    fecha = inspection.fecha.time.toString(),
-                    hojaDeRuta = inspection.hojaDeRuta,
-                    tejeduria = inspection.tejeduria,
-                    telar = inspection.telar,
-                    tintoreria = inspection.tintoreria,
-                    articulo = inspection.articulo,
-                    color = inspection.color,
-                    rolloDeUrdido = inspection.rolloDeUrdido,
-                    orden = inspection.orden,
-                    cadena = inspection.cadena,
-                    anchoDeRollo = inspection.anchoDeRollo,
-                    esmerilado = inspection.esmerilado,
-                    ignifugo = inspection.ignifugo,
-                    impermeable = inspection.impermeable,
-                    otro = inspection.otro,
-                    tipoCalidad = inspection.tipoCalidad,
-                    tipoDeFalla = inspection.tipoDeFalla,
-                    metrosDeTela = inspection.metrosDeTela,
-                    imageUrls = inspection.imageUrls.joinToString(",")
-                )
-
-                // 4. Si la subida fue exitosa, marcar el registro como sincronizado.
-                if (response.status == "SUCCESS") {
-                    val updatedInspection = inspection.copy(isSynced = true, imageUrls = emptyList())
-                    repository.update(updatedInspection)
-                    withContext(Dispatchers.Main) {
-                        _syncMessage.value = "Registro subido con éxito."
-                    }
-                    return@withLock true
-                } else {
-                    withContext(Dispatchers.Main) {
-                        _syncMessage.value = "Error al subir ${inspection.articulo}: ${response.message}. Guardado localmente."
-                    }
-                    return@withLock false
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    _syncMessage.value = "Error de conexión o API. Guardado localmente. ${e.message}"
-                }
-                Log.e("SyncDebug", "Error al sincronizar datos para ${inspection.articulo}", e)
-                return@withLock false
-            }
+    suspend fun finalizeAndSync(inspection: Inspection): Boolean {
+        // Establecer el estado de carga al iniciar
+        withContext(Dispatchers.Main) {
+            _isLoading.value = true
         }
+
+        // La lógica de la subida real está en `performSync` para evitar duplicación.
+        // Aquí solo nos encargamos de insertar y esperar.
+
+        // 1. Insertar el registro localmente.
+        repository.insert(inspection)
+
+        // 2. Ejecutar la sincronización de todos los pendientes, incluyendo el nuevo.
+        performSync()
+
+        // Esperamos a que la sincronización termine.
+        // Se espera a que el número de registros no sincronizados disminuya.
+        val unsyncedSizeBefore = repository.getUnsyncedInspectionsOnce().size
+        var unsyncedSizeAfter = unsyncedSizeBefore
+        var waitAttempts = 0
+        while (unsyncedSizeAfter >= unsyncedSizeBefore && waitAttempts < 5) {
+            kotlinx.coroutines.delay(500) // Esperar 500ms
+            unsyncedSizeAfter = repository.getUnsyncedInspectionsOnce().size
+            waitAttempts++
+        }
+
+        // Si el tamaño después es menor, significa que al menos un registro se subió.
+        val success = unsyncedSizeAfter < unsyncedSizeBefore
+
+        // Al final de la función, restablecer el estado de carga a false
+        withContext(Dispatchers.Main) {
+            _isLoading.value = false
+        }
+
+        return success
     }
 }

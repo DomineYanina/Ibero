@@ -7,6 +7,7 @@ import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -36,7 +37,11 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
     private lateinit var recyclerViewCurrentSessionRecords: RecyclerView
     private lateinit var currentSessionInspectionAdapter: CurrentSessionInspectionAdapter
-    private lateinit var textSessionTitle: TextView // Nueva variable para el título dinámico
+    private lateinit var textSessionTitle: TextView
+
+    // Nuevas variables para el estado de carga
+    private lateinit var progressBar: ProgressBar
+    private lateinit var loadingOverlay: View
 
     // Datos de la primera pantalla que se mantienen
     private lateinit var usuario: String
@@ -45,7 +50,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var tejeduria: String
     private var telar: Int = 0
     private var tintoreria: Int = 0
-    private lateinit var articulo: String // Se mantiene para usarlo en el título
+    private lateinit var articulo: String
     private var color: Int = 0
     private var rolloDeUrdido: Int = 0
     private lateinit var orden: String
@@ -86,8 +91,35 @@ class SegundoRegistroActivity : AppCompatActivity() {
         setupListeners()
         setupCurrentSessionRecyclerView()
 
+        // Inicializar las nuevas vistas
+        progressBar = findViewById(R.id.progress_bar)
+        loadingOverlay = findViewById(R.id.loading_overlay)
+
         // Actualizar el título con el artículo
         textSessionTitle.text = "Registros ingresados para el artículo: $articulo"
+
+        // Observar el estado de carga del ViewModel
+        viewModel.isLoading.observe(this) { isLoading ->
+            if (isLoading) {
+                progressBar.visibility = View.VISIBLE
+                loadingOverlay.visibility = View.VISIBLE
+
+                btnIncorporar.isEnabled = false
+                btnGuardarRegistro.isEnabled = false
+                spinnerTipoCalidad.isEnabled = false
+                spinnerTipoDeFalla.isEnabled = false
+                editMetrosDeTela.isEnabled = false
+            } else {
+                progressBar.visibility = View.GONE
+                loadingOverlay.visibility = View.GONE
+
+                btnIncorporar.isEnabled = true
+                btnGuardarRegistro.isEnabled = true
+                spinnerTipoCalidad.isEnabled = true
+                spinnerTipoDeFalla.isEnabled = true
+                editMetrosDeTela.isEnabled = true
+            }
+        }
 
         // Observa los mensajes de sincronización del ViewModel para mostrarlos al usuario
         viewModel.syncMessage.observe(this) { message ->
@@ -111,7 +143,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         btnGuardarRegistro = findViewById(R.id.btn_guardar_registro)
         btnIncorporar = findViewById(R.id.btn_incorporar)
         recyclerViewCurrentSessionRecords = findViewById(R.id.recycler_view_current_session_records)
-        textSessionTitle = findViewById(R.id.text_session_title) // Inicializar la nueva variable
+        textSessionTitle = findViewById(R.id.text_session_title)
     }
 
     private fun setupSpinners() {
@@ -163,41 +195,44 @@ class SegundoRegistroActivity : AppCompatActivity() {
         recyclerViewCurrentSessionRecords.adapter = currentSessionInspectionAdapter
     }
 
+    /**
+     * Este método es para el botón "Continuar".
+     * Inserta el registro localmente, y la sincronización se dispara de forma
+     * reactiva por la observación de la base de datos y la red.
+     */
     private fun saveInspectionAndResetForm() {
         val inspection = createInspectionObject()
         lifecycleScope.launch {
             viewModel.insertInspection(inspection)
-            viewModel.performSync()
             resetForm()
         }
     }
 
+    /**
+     * Este método es para el botón "Finalizar".
+     * Llama al método `finalizeAndSync` del ViewModel para asegurarse
+     * de que el registro se suba a la nube antes de redirigir.
+     */
     private fun saveInspectionAndFinalize() {
         val inspection = createInspectionObject()
         lifecycleScope.launch {
-
-            // Llamar a la nueva función suspendida y esperar su resultado
-            val success = viewModel.insertAndSync(inspection)
+            // Llama a la nueva función suspendida para insertar y sincronizar de forma síncrona
+            val success = viewModel.finalizeAndSync(inspection)
 
             // Limpiar la lista de registros de la sesión
             viewModel.clearCurrentSessionList()
 
+            // Después de que la sincronización termine, redirigimos
             if (success) {
-                // El registro se subió, ahora podemos redirigir.
                 Toast.makeText(this@SegundoRegistroActivity, "Registro subido y finalizado.", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this@SegundoRegistroActivity, MainActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                startActivity(intent)
-                finish()
             } else {
-                // La subida a la nube falló, pero el registro se guardó localmente.
-                // Aún podemos redirigir, pero con un mensaje de advertencia.
                 Toast.makeText(this@SegundoRegistroActivity, "No se pudo subir a la nube. Guardado localmente. Finalizando.", Toast.LENGTH_LONG).show()
-                val intent = Intent(this@SegundoRegistroActivity, MainActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                startActivity(intent)
-                finish()
             }
+
+            val intent = Intent(this@SegundoRegistroActivity, MainActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+            startActivity(intent)
+            finish()
         }
     }
 
