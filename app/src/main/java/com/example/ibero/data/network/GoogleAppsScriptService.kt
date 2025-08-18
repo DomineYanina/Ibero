@@ -25,13 +25,20 @@ data class AddInspectionData(
     val uniqueId: String?
 )
 
-// Modelo de datos para la respuesta de la búsqueda de tonalidades
-data class TonalidadesResponse(
-    val status: String,
-    val message: String?, // Ahora el mensaje puede ser nulo en caso de éxito
-    val data: List<TonalidadResponseItem>?
+data class TonalidadesData(
+    // El campo que antes se llamaba valorColumnaT ahora es más claro como valorColumnaA
+    @SerializedName("valorColumnaA") val valorColumnaA: String?,
+    // ¡NUEVO CAMPO!
+    @SerializedName("valorColumnaV") val valorColumnaV: String?,
+    @SerializedName("rowNumber") val rowNumber: Int
 )
 
+// Modelo de la respuesta completa del servidor
+data class TonalidadesResponse(
+    @SerializedName("status") val status: String,
+    @SerializedName("message") val message: String?,
+    @SerializedName("data") val data: List<TonalidadesData>?
+)
 // Modelo de datos para los ítems de la respuesta de búsqueda
 data class TonalidadResponseItem(
     val valorColumnaT: String,
@@ -93,7 +100,7 @@ object GoogleSheetsApi {
      * Pega aquí la URL de despliegue de tu Apps Script PERO sin el "/exec" final.
      */
     private const val BASE_URL =
-        "https://script.google.com/macros/s/AKfycbxkq7hPiQJ3tAw0v7_mdcYZSIpOeocWFquisDb1vAb9W8qLg-EM-kq3d-9Os0P5ilWM7Q/"
+        "https://script.google.com/macros/s/AKfycbw2IMC8WgTLb23bRHZpjpc7lH9opF0wcWcwpqN2_bldP4UCsu2M8c0axugTexY1v6jp1Q/"
 
     val service: GoogleAppsScriptService by lazy {
         val logging = HttpLoggingInterceptor().apply {

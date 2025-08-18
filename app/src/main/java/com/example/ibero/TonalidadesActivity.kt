@@ -10,9 +10,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ibero.data.network.GoogleSheetsApi
-import com.example.ibero.data.network.TonalidadesResponse
 import com.example.ibero.ui.TonalidadesAdapter
-import com.example.ibero.data.TonalidadItem // Importa el modelo de la capa UI
+import com.example.ibero.data.TonalidadItem
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +58,7 @@ class TonalidadesActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
+        // Se inicializa el adaptador con una lista vacía
         adapter = TonalidadesAdapter(mutableListOf())
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
@@ -67,23 +67,25 @@ class TonalidadesActivity : AppCompatActivity() {
     private fun buscarRegistrosPorHojaRuta(hojaRuta: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Llama al método de búsqueda en la API que configuraste
                 val response = GoogleSheetsApi.service.findTonalidades(hojaDeRuta = hojaRuta)
 
                 withContext(Dispatchers.Main) {
                     if (response.status == "success" && !response.data.isNullOrEmpty()) {
-                        // Mapea la respuesta de la API a tu modelo de datos de la UI
-                        val uiItems = response.data!!.map { dataItem ->
-                            TonalidadItem(
-                                uniqueId = dataItem.rowNumber.toString(), // Usamos el número de fila como ID
-                                valorColumnaT = dataItem.valorColumnaT
-                            )
-                        }
 
-                        adapter.updateList(uiItems.toMutableList())
+                        val uiItems = response.data!!.map { dataItem ->
+                            val tonalidadPrevia = dataItem.valorColumnaV
+                            TonalidadItem(
+                                uniqueId = dataItem.rowNumber.toString(),
+                                valorHojaDeRutaId = dataItem.valorColumnaA ?: "", // Si por alguna razón el valor es nulo, se usa una cadena vacía
+                                tonalidadPrevia = tonalidadPrevia,
+                                isEditable = tonalidadPrevia.isNullOrBlank(),
+                                nuevaTonalidad = tonalidadPrevia ?: ""
+                            )
+                        }.toMutableList()
+
+                        adapter.updateList(uiItems)
                         btnGuardar.visibility = View.VISIBLE
                     } else {
-                        // Usa el campo 'message' que ahora existe en TonalidadesResponse
                         Toast.makeText(this@TonalidadesActivity, "Error en la búsqueda: ${response.message}", Toast.LENGTH_LONG).show()
                         adapter.updateList(mutableListOf())
                         btnGuardar.visibility = View.GONE
@@ -101,6 +103,7 @@ class TonalidadesActivity : AppCompatActivity() {
     }
 
     private fun guardarTonalidades() {
+        // Obtenemos solo los items editables que fueron modificados
         val registrosAActualizar = adapter.getUpdatedItems()
         if (registrosAActualizar.isEmpty()) {
             Toast.makeText(this, "No hay tonalidades para guardar.", Toast.LENGTH_SHORT).show()
@@ -109,20 +112,20 @@ class TonalidadesActivity : AppCompatActivity() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Convierte la lista de items a un JSON string para enviarlo al Apps Script
-                val gson = Gson()
-                val updatesJson = gson.toJson(registrosAActualizar.map {
-                    // Mapea a un formato simple para el Apps Script
+                // Mapeamos a un formato que el Apps Script pueda procesar
+                val updates = registrosAActualizar.map {
                     mapOf("rowNumber" to it.uniqueId.toInt(), "nuevaTonalidad" to it.nuevaTonalidad)
-                })
+                }
 
-                // Llama al método de actualización en la API
+                val gson = Gson()
+                val updatesJson = gson.toJson(updates)
+
                 val response = GoogleSheetsApi.service.updateTonalidades(updates = updatesJson)
 
                 withContext(Dispatchers.Main) {
                     if (response.status == "success") {
                         Toast.makeText(this@TonalidadesActivity, "Tonalidades guardadas exitosamente.", Toast.LENGTH_SHORT).show()
-                        finish() // Regresa a la vista anterior
+                        finish()
                     } else {
                         Toast.makeText(this@TonalidadesActivity, "Error al guardar: ${response.message}", Toast.LENGTH_LONG).show()
                     }
