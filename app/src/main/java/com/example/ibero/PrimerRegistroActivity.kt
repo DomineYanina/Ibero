@@ -4,10 +4,12 @@ import android.app.DatePickerDialog
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -42,6 +44,11 @@ class PrimerRegistroActivity : AppCompatActivity() {
     private lateinit var editOtro: EditText
     private lateinit var btnNext: Button
 
+    // --- CAMBIO AÑADIDO ---
+    private lateinit var progressBar: ProgressBar
+    // Lista de vistas a habilitar/deshabilitar
+    private lateinit var inputFields: List<View>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_primer_registro)
@@ -72,6 +79,15 @@ class PrimerRegistroActivity : AppCompatActivity() {
         editImpermeable = findViewById(R.id.edit_impermeable)
         editOtro = findViewById(R.id.edit_otro)
         btnNext = findViewById(R.id.btn_next)
+
+        // --- CAMBIO AÑADIDO ---
+        progressBar = findViewById(R.id.progress_bar_loading)
+        inputFields = listOf(
+            editFecha, editHojaDeRuta, spinnerTejeduria, spinnerTelar, editTintoreria,
+            spinnerArticulo, editColor, editRolloDeUrdido, editOrden, editCadena,
+            editAnchoDeRollo, editEsmerilado, editIgnifugo, editImpermeable, editOtro,
+            btnNext
+        )
 
         textUsuario.text = "Usuario: $loggedInUser"
     }
@@ -113,6 +129,11 @@ class PrimerRegistroActivity : AppCompatActivity() {
         val hojaDeRuta = editHojaDeRuta.text.toString().trim()
 
         CoroutineScope(Dispatchers.IO).launch {
+            // --- CAMBIO AÑADIDO: Mostrar estado de carga ---
+            withContext(Dispatchers.Main) {
+                setLoadingState(true)
+            }
+
             try {
                 // Llama al método de la API para verificar la existencia
                 val response = GoogleSheetsApi.service.checkHojaRutaExistence(hojaDeRuta = hojaDeRuta)
@@ -138,7 +159,20 @@ class PrimerRegistroActivity : AppCompatActivity() {
                     Toast.makeText(this@PrimerRegistroActivity, "Error de conexión. Intente nuevamente.", Toast.LENGTH_LONG).show()
                     Log.e("PrimerRegistroActivity", "Error al verificar hoja de ruta", e)
                 }
+            } finally {
+                // --- CAMBIO AÑADIDO: Ocultar estado de carga, sin importar el resultado ---
+                withContext(Dispatchers.Main) {
+                    setLoadingState(false)
+                }
             }
+        }
+    }
+
+    // --- NUEVA FUNCIÓN: Manejar el estado de carga ---
+    private fun setLoadingState(isLoading: Boolean) {
+        progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        for (field in inputFields) {
+            field.isEnabled = !isLoading
         }
     }
 
@@ -193,7 +227,6 @@ class PrimerRegistroActivity : AppCompatActivity() {
         datePickerDialog.show()
     }
 
-    // Ya no se usa para HOJA_DE_RUTA, pero se mantiene para ORDEN si es necesario
     private fun formatHojaDeRuta(hojaDeRutaInput: String): String {
         val cleanedInput = hojaDeRutaInput.trim()
         val calendar = Calendar.getInstance()
