@@ -79,6 +79,13 @@ interface GoogleAppsScriptService {
         @Field("action") action: String = "updateTonalidades",
         @Field("updates") updates: String // JSON string de los ítems a actualizar
     ): ApiResponse
+
+    @FormUrlEncoded
+    @POST("exec")
+    suspend fun checkHojaRutaExistence(
+        @Field("action") action: String = "checkHojaRutaExistence",
+        @Field("hojaDeRuta") hojaDeRuta: String
+    ): CheckHojaRutaResponse
 }
 
 object GoogleSheetsApi {
@@ -86,7 +93,7 @@ object GoogleSheetsApi {
      * Pega aquí la URL de despliegue de tu Apps Script PERO sin el "/exec" final.
      */
     private const val BASE_URL =
-        "https://script.google.com/macros/s/AKfycbzJxHJB-rJmM5EO4i-meR6B6_6mdeSGOo0MIH4BCVjIMUsXZsWmUGFjXNtUCNYDsTiSiA/"
+        "https://script.google.com/macros/s/AKfycbxkq7hPiQJ3tAw0v7_mdcYZSIpOeocWFquisDb1vAb9W8qLg-EM-kq3d-9Os0P5ilWM7Q/"
 
     val service: GoogleAppsScriptService by lazy {
         val logging = HttpLoggingInterceptor().apply {

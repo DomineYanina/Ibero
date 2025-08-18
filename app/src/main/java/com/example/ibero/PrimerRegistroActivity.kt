@@ -3,6 +3,7 @@ package com.example.ibero
 import android.app.DatePickerDialog
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.Button
@@ -10,7 +11,12 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.ibero.data.network.GoogleSheetsApi
 import com.google.android.material.textfield.TextInputLayout
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -30,9 +36,9 @@ class PrimerRegistroActivity : AppCompatActivity() {
     private lateinit var editOrden: EditText
     private lateinit var editCadena: EditText
     private lateinit var editAnchoDeRollo: EditText
-    private lateinit var editEsmerilado: EditText // Modificado a EditText
-    private lateinit var editIgnifugo: EditText // Modificado a EditText
-    private lateinit var editImpermeable: EditText // Modificado a EditText
+    private lateinit var editEsmerilado: EditText
+    private lateinit var editIgnifugo: EditText
+    private lateinit var editImpermeable: EditText
     private lateinit var editOtro: EditText
     private lateinit var btnNext: Button
 
@@ -61,9 +67,9 @@ class PrimerRegistroActivity : AppCompatActivity() {
         editOrden = findViewById(R.id.edit_orden)
         editCadena = findViewById(R.id.edit_cadena)
         editAnchoDeRollo = findViewById(R.id.edit_ancho_de_rollo)
-        editEsmerilado = findViewById(R.id.edit_esmerilado) // Modificado a EditText
-        editIgnifugo = findViewById(R.id.edit_ignifugo) // Modificado a EditText
-        editImpermeable = findViewById(R.id.edit_impermeable) // Modificado a EditText
+        editEsmerilado = findViewById(R.id.edit_esmerilado)
+        editIgnifugo = findViewById(R.id.edit_ignifugo)
+        editImpermeable = findViewById(R.id.edit_impermeable)
         editOtro = findViewById(R.id.edit_otro)
         btnNext = findViewById(R.id.btn_next)
 
@@ -86,7 +92,6 @@ class PrimerRegistroActivity : AppCompatActivity() {
         )
         val articuloAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, articuloOptions)
         spinnerArticulo.setAdapter(articuloAdapter)
-
     }
 
     private fun setupListeners() {
@@ -96,39 +101,75 @@ class PrimerRegistroActivity : AppCompatActivity() {
 
         btnNext.setOnClickListener {
             if (validateForm()) {
-                val intent = Intent(this, SegundoRegistroActivity::class.java)
-
-                val telarValue = spinnerTelar.text.toString().toIntOrNull() ?: 0
-                val tintoreriaValue = editTintoreria.text.toString().toIntOrNull() ?: 0
-                val colorValue = editColor.text.toString().toIntOrNull() ?: 0
-                val rolloUrdidoValue = editRolloDeUrdido.text.toString().toIntOrNull() ?: 0
-                val cadenaValue = editCadena.text.toString().toIntOrNull() ?: 0
-                val anchoRolloValue = editAnchoDeRollo.text.toString().toIntOrNull() ?: 0
-
-                intent.putExtra("LOGGED_IN_USER", loggedInUser)
-                intent.putExtra("FECHA", editFecha.text.toString())
-                intent.putExtra("HOJA_DE_RUTA", editHojaDeRuta.text.toString())
-                //intent.putExtra("HOJA_DE_RUTA", formatHojaDeRuta(editHojaDeRuta.text.toString()))
-                intent.putExtra("TEJEDURIA", spinnerTejeduria.text.toString())
-                intent.putExtra("TELAR", telarValue)
-                intent.putExtra("TINTORERIA", tintoreriaValue)
-                intent.putExtra("ARTICULO", spinnerArticulo.text.toString())
-                intent.putExtra("COLOR", colorValue)
-                intent.putExtra("ROLLO_DE_URDIDO", rolloUrdidoValue)
-                intent.putExtra("ORDEN", formatHojaDeRuta(editOrden.text.toString()))
-                //intent.putExtra("ORDEN", editOrden.text.toString())
-                intent.putExtra("CADENA", cadenaValue)
-                intent.putExtra("ANCHO_DE_ROLLO", anchoRolloValue)
-                intent.putExtra("ESMERILADO", editEsmerilado.text.toString()) // Ahora se obtiene de EditText
-                intent.putExtra("IGNIFUGO", editIgnifugo.text.toString()) // Ahora se obtiene de EditText
-                intent.putExtra("IMPERMEABLE", editImpermeable.text.toString()) // Ahora se obtiene de EditText
-                intent.putExtra("OTRO", editOtro.text.toString())
-
-                startActivity(intent)
+                // Validación local pasada, ahora verificar en Google Sheets
+                checkHojaDeRutaExistence()
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun checkHojaDeRutaExistence() {
+        val hojaDeRuta = editHojaDeRuta.text.toString().trim()
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Llama al método de la API para verificar la existencia
+                val response = GoogleSheetsApi.service.checkHojaRutaExistence(hojaDeRuta = hojaDeRuta)
+
+                withContext(Dispatchers.Main) {
+                    if (response.status == "SUCCESS") {
+                        if (response.data.exists) {
+                            // La hoja de ruta YA existe, mostrar error y limpiar campo
+                            Toast.makeText(this@PrimerRegistroActivity, "Error: La hoja de ruta ya existe.", Toast.LENGTH_LONG).show()
+                            editHojaDeRuta.text.clear()
+                            editHojaDeRuta.requestFocus()
+                        } else {
+                            // La hoja de ruta NO existe, proceder al siguiente paso
+                            navigateToNextActivity()
+                        }
+                    } else {
+                        // Error del servidor (ej. Hoja no encontrada)
+                        Toast.makeText(this@PrimerRegistroActivity, "Error en la verificación: ${response.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@PrimerRegistroActivity, "Error de conexión. Intente nuevamente.", Toast.LENGTH_LONG).show()
+                    Log.e("PrimerRegistroActivity", "Error al verificar hoja de ruta", e)
+                }
+            }
+        }
+    }
+
+    private fun navigateToNextActivity() {
+        val intent = Intent(this, SegundoRegistroActivity::class.java)
+
+        val telarValue = spinnerTelar.text.toString().toIntOrNull() ?: 0
+        val tintoreriaValue = editTintoreria.text.toString().toIntOrNull() ?: 0
+        val colorValue = editColor.text.toString().toIntOrNull() ?: 0
+        val rolloUrdidoValue = editRolloDeUrdido.text.toString().toIntOrNull() ?: 0
+        val cadenaValue = editCadena.text.toString().toIntOrNull() ?: 0
+        val anchoRolloValue = editAnchoDeRollo.text.toString().toIntOrNull() ?: 0
+
+        intent.putExtra("LOGGED_IN_USER", loggedInUser)
+        intent.putExtra("FECHA", editFecha.text.toString())
+        intent.putExtra("HOJA_DE_RUTA", editHojaDeRuta.text.toString())
+        intent.putExtra("TEJEDURIA", spinnerTejeduria.text.toString())
+        intent.putExtra("TELAR", telarValue)
+        intent.putExtra("TINTORERIA", tintoreriaValue)
+        intent.putExtra("ARTICULO", spinnerArticulo.text.toString())
+        intent.putExtra("COLOR", colorValue)
+        intent.putExtra("ROLLO_DE_URDIDO", rolloUrdidoValue)
+        intent.putExtra("ORDEN", editOrden.text.toString())
+        intent.putExtra("CADENA", cadenaValue)
+        intent.putExtra("ANCHO_DE_ROLLO", anchoRolloValue)
+        intent.putExtra("ESMERILADO", editEsmerilado.text.toString())
+        intent.putExtra("IGNIFUGO", editIgnifugo.text.toString())
+        intent.putExtra("IMPERMEABLE", editImpermeable.text.toString())
+        intent.putExtra("OTRO", editOtro.text.toString())
+
+        startActivity(intent)
     }
 
     private fun setCurrentDateTime() {
@@ -152,9 +193,9 @@ class PrimerRegistroActivity : AppCompatActivity() {
         datePickerDialog.show()
     }
 
+    // Ya no se usa para HOJA_DE_RUTA, pero se mantiene para ORDEN si es necesario
     private fun formatHojaDeRuta(hojaDeRutaInput: String): String {
-        // No se usa padStart para no agregar ceros al inicio
-        val cleanedInput = hojaDeRutaInput.trim() // Opcional: limpiar espacios en blanco
+        val cleanedInput = hojaDeRutaInput.trim()
         val calendar = Calendar.getInstance()
         val year = calendar.get(Calendar.YEAR).toString().takeLast(2)
         return "$cleanedInput-a$year"
@@ -201,7 +242,6 @@ class PrimerRegistroActivity : AppCompatActivity() {
         return isValid
     }
 
-    // Helper function to find the parent TextInputLayout ID from the child EditText ID
     private fun parentLayoutId(childId: Int): Int {
         return when (childId) {
             R.id.edit_hoja_de_ruta -> R.id.layout_hoja_de_ruta
