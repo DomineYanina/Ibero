@@ -1,55 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
         xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="16dp"
         tools:context=".TonalidadesActivity">
 
-    <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Agregar Tonalidades"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="16dp"/>
-
-    <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/layout_hoja_ruta_tonalidad"
+    <!-- Contenedor principal del formulario y los botones -->
+    <LinearLayout
+            android:id="@+id/form_container"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Hoja de Ruta"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_marginBottom="8dp">
-        <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_hoja_ruta_tonalidad"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Agregar Tonalidades"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="16dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_hoja_ruta_tonalidad"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="text"/>
-    </com.google.android.material.textfield.TextInputLayout>
+                android:hint="Hoja de Ruta"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_marginBottom="8dp">
 
-    <Button
-            android:id="@+id/btn_buscar_tonalidades"
-            android:layout_width="match_parent"
+            <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_hoja_ruta_tonalidad"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <Button
+                android:id="@+id/btn_buscar_tonalidades"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Buscar" />
+
+        <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_view_tonalidades"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="16dp" />
+
+        <Button
+                android:id="@+id/btn_guardar_tonalidades"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Guardar"
+                android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- Barra de progreso flotante (oculta por defecto) -->
+    <ProgressBar
+            android:id="@+id/progress_bar_loading"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Buscar"/>
+            android:layout_gravity="center"
+            android:visibility="gone" />
 
-    <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_view_tonalidades"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:layout_marginTop="16dp"/>
-
-    <Button
-            android:id="@+id/btn_guardar_tonalidades"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Guardar"
-            android:visibility="gone"/>
-
-</LinearLayout>
+</FrameLayout>
