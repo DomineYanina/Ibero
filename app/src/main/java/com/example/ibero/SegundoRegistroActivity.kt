@@ -229,7 +229,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
                 Toast.makeText(this@SegundoRegistroActivity, "No se pudo subir a la nube. Guardado localmente. Finalizando.", Toast.LENGTH_LONG).show()
             }
 
-            val intent = Intent(this@SegundoRegistroActivity, MainActivity::class.java)
+            val intent = Intent(this@SegundoRegistroActivity, HomeActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
             startActivity(intent)
             finish()
