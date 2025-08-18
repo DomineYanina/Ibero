@@ -87,7 +87,6 @@ class PrimerRegistroActivity : AppCompatActivity() {
         val articuloAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, articuloOptions)
         spinnerArticulo.setAdapter(articuloAdapter)
 
-        // Ya no se configuran los adaptadores para los campos que ahora son de texto libre
     }
 
     private fun setupListeners() {

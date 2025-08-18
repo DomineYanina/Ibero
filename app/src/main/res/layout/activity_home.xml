@@ -1,37 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="24dp"
-    android:background="#F5F5F5"
-    tools:context=".HomeActivity">
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="24dp"
+        android:background="#F5F5F5"
+        tools:context=".HomeActivity">
 
     <TextView
-        android:id="@+id/text_welcome"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Bienvenido, [Usuario]"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="#333333"
-        android:layout_marginBottom="48dp"/>
+            android:id="@+id/text_welcome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bienvenido, [Usuario]"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:layout_marginBottom="48dp"/>
 
     <Button
-        android:id="@+id/btn_new_record"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Nuevo Registro"
-        android:padding="16dp"
-        android:textSize="18sp"
-        android:backgroundTint="#4CAF50"
-        android:textColor="@android:color/white"
-        style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-        android:drawableStart="@drawable/ic_add_white"
-        android:drawablePadding="8dp"
-        android:layout_marginBottom="16dp"/>
+            android:id="@+id/btn_new_record"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nuevo Registro"
+            android:padding="16dp"
+            android:textSize="18sp"
+            android:backgroundTint="#4CAF50"
+            android:textColor="@android:color/white"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+            android:drawableStart="@drawable/ic_add_white"
+            android:drawablePadding="8dp"
+            android:layout_marginBottom="16dp"/>
+
+    <Button
+            android:id="@+id/btn_agregar_tonalidades"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Agregar Tonalidades"
+            android:padding="16dp"
+            android:textSize="18sp"
+            android:backgroundTint="#2196F3"
+            android:textColor="@android:color/white"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+            android:drawableStart="@drawable/ic_edit_white"
+            android:drawablePadding="8dp"
+            android:layout_marginBottom="16dp"/>
 
 </LinearLayout>

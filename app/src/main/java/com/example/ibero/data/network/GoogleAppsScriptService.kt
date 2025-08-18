@@ -12,46 +12,72 @@ import java.util.concurrent.TimeUnit
 // Debe corresponder al JSON que devuelve tu Apps Script.
 data class ApiResponse(val status: String, val message: String)
 
+// Nuevo objeto de respuesta para la búsqueda de tonalidades
+data class TonalidadesResponse(
+    val status: String,
+    val data: List<TonalidadResponseItem>
+) {
+    val message: String
+        get() {
+            TODO()
+        }
+}
+
+// Nuevo modelo de datos para los ítems de la respuesta de búsqueda
+data class TonalidadResponseItem(
+    val valorColumnaT: String,
+    val rowNumber: Int // El número de fila es clave para la actualización
+)
+
 interface GoogleAppsScriptService {
     @FormUrlEncoded
     @POST("exec") // ¡Ojo! Aquí va "exec"
     suspend fun addInspection(
-        @Field("action") action: String,     // "addInspection"
+        @Field("action") action: String = "addInspection",
         @Field("uniqueId") uniqueId: String,
         @Field("usuario") usuario: String,
-        @Field("fecha") fecha: String,       // timestamp en milisegundos como String
+        @Field("fecha") fecha: String,
         @Field("hojaDeRuta") hojaDeRuta: String,
         @Field("tejeduria") tejeduria: String,
         @Field("telar") telar: Int,
         @Field("tintoreria") tintoreria: Int,
         @Field("articulo") articulo: String,
-        @Field("color") color: Int,               // Nuevo campo
-        @Field("rolloDeUrdido") rolloDeUrdido: Int,   // Nuevo campo
-        @Field("orden") orden: String,            // Nuevo campo
-        @Field("cadena") cadena: Int,             // Nuevo campo
-        @Field("anchoDeRollo") anchoDeRollo: Int,       // Nuevo campo, tipo Int
-        @Field("esmerilado") esmerilado: String,      // Nuevo campo
-        @Field("ignifugo") ignifugo: String,        // Nuevo campo
-        @Field("impermeable") impermeable: String,      // Nuevo campo
-        @Field("otro") otro: String,             // Nuevo campo
+        @Field("color") color: Int,
+        @Field("rolloDeUrdido") rolloDeUrdido: Int,
+        @Field("orden") orden: String,
+        @Field("cadena") cadena: Int,
+        @Field("anchoDeRollo") anchoDeRollo: Int,
+        @Field("esmerilado") esmerilado: String,
+        @Field("ignifugo") ignifugo: String,
+        @Field("impermeable") impermeable: String,
+        @Field("otro") otro: String,
         @Field("tipoCalidad") tipoCalidad: String,
-        @Field("tipoDeFalla") tipoDeFalla: String?,  // puede ir null
-        @Field("metrosDeTela") metrosDeTela: Double, // Nuevo campo
-        @Field("imageUrls") imageUrls: String        // CSV si hay varias
+        @Field("tipoDeFalla") tipoDeFalla: String?,
+        @Field("metrosDeTela") metrosDeTela: Double,
+        @Field("imageUrls") imageUrls: String
+    ): ApiResponse
+
+    @FormUrlEncoded
+    @POST("exec")
+    suspend fun findTonalidades(
+        @Field("action") action: String = "findTonalidades",
+        @Field("hojaDeRuta") hojaDeRuta: String
+    ): TonalidadesResponse
+
+    @FormUrlEncoded
+    @POST("exec")
+    suspend fun updateTonalidades(
+        @Field("action") action: String = "updateTonalidades",
+        @Field("updates") updates: String // JSON string de los ítems a actualizar
     ): ApiResponse
 }
 
 object GoogleSheetsApi {
     /**
-     * IMPORTANTÍSIMO:
      * Pega aquí la URL de despliegue de tu Apps Script PERO sin el "/exec" final.
-     * Si la URL publicada es:
-     * https://script.google.com/macros/s/AKfycb.../exec
-     * usa como BASE_URL:
-     * https://script.google.com/macros/s/AKfycb.../
      */
     private const val BASE_URL =
-        "https://script.google.com/macros/s/AKfycbzBVYUCujiDnPzC8rPvUnXsbAwvowq16p58_NfCLl2kxjXH88Tg-S5CC8iU9wjefGAqyg/"
+        "https://script.google.com/macros/s/AKfycbyR1hqIeKK245cv4Wm_cMPa8LG0bg5z0HqYMnXd8LlAuO7agjbDUlBKlMfVuMCEFLhHDA/"
 
     val service: GoogleAppsScriptService by lazy {
         val logging = HttpLoggingInterceptor().apply {
@@ -65,7 +91,7 @@ object GoogleSheetsApi {
             .build()
 
         Retrofit.Builder()
-            .baseUrl(BASE_URL)  // base SIN 'exec'
+            .baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .client(client)
             .build()
