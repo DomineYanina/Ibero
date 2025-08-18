@@ -1,5 +1,7 @@
 package com.example.ibero.ui
 
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,6 +17,9 @@ class TonalidadesAdapter(private var items: MutableList<TonalidadItem>) :
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val uniqueIdTextView: TextView = view.findViewById(R.id.text_view_columna_t)
         val tonalidadEditText: TextInputEditText = view.findViewById(R.id.edit_text_tonalidad)
+
+        // Referencia al TextWatcher para poder limpiarlo
+        var textWatcher: TextWatcher? = null
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -26,6 +31,9 @@ class TonalidadesAdapter(private var items: MutableList<TonalidadItem>) :
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
 
+        // Importante: Eliminar el TextWatcher anterior para evitar conflictos
+        holder.textWatcher?.let { holder.tonalidadEditText.removeTextChangedListener(it) }
+
         // Muestra el ID de la hoja de ruta
         holder.uniqueIdTextView.text = item.valorHojaDeRutaId
 
@@ -34,25 +42,32 @@ class TonalidadesAdapter(private var items: MutableList<TonalidadItem>) :
             // El campo ya tiene un valor, lo muestra y lo deshabilita
             holder.tonalidadEditText.setText(item.tonalidadPrevia)
             holder.tonalidadEditText.isEnabled = false
-            holder.tonalidadEditText.alpha = 0.5f // Opcional: para que se vea deshabilitado
+            holder.tonalidadEditText.alpha = 0.5f
         } else {
             // No tiene valor, es un nuevo registro, el campo está vacío y habilitado
-            holder.tonalidadEditText.text?.clear()
+            holder.tonalidadEditText.setText(item.nuevaTonalidad) // Usa la nuevaTonalidad del modelo
             holder.tonalidadEditText.isEnabled = true
-            holder.tonalidadEditText.alpha = 1.0f // Opcional
+            holder.tonalidadEditText.alpha = 1.0f
+
+            // Añadir el nuevo TextWatcher al EditText del ViewHolder actual
+            holder.textWatcher = object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    // Actualizamos el modelo de datos en tiempo real
+                    item.nuevaTonalidad = s.toString()
+                }
+                override fun afterTextChanged(s: Editable?) {}
+            }
+            holder.tonalidadEditText.addTextChangedListener(holder.textWatcher)
         }
 
-        // Escucha cambios para guardar la nueva tonalidad
-        holder.tonalidadEditText.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
-                item.nuevaTonalidad = holder.tonalidadEditText.text.toString()
-            }
-        }
+        // Eliminamos el OnFocusChangeListener obsoleto
+        holder.tonalidadEditText.setOnFocusChangeListener(null)
     }
 
     override fun getItemCount(): Int = items.size
 
-    fun updateList(newList: MutableList<TonalidadItem>) { // Se eliminó el '?' de TonalidadItem
+    fun updateList(newList: MutableList<TonalidadItem>) {
         this.items = newList
         notifyDataSetChanged()
     }
