@@ -31,13 +31,50 @@
                     android:layout_gravity="center_horizontal"
                     android:layout_marginBottom="24dp"/>
 
-            <!-- Este es el contenedor del formulario que ahora se mostrará primero -->
+            <!-- Contenedor de búsqueda de Hoja de Ruta -->
+            <LinearLayout
+                    android:id="@+id/hoja_ruta_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_hoja_ruta_continuar"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Hoja de Ruta"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edit_hoja_ruta_continuar"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <Button
+                        android:id="@+id/btn_buscar_continuar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Buscar"
+                        android:padding="16dp"
+                        android:layout_marginStart="8dp"
+                        android:backgroundTint="#2196F3"
+                        android:textColor="@android:color/white"
+                        style="@style/Widget.MaterialComponents.Button.UnelevatedButton"/>
+
+            </LinearLayout>
+
+            <!-- Este es el contenedor principal que se ocultará hasta que se realice la búsqueda -->
             <LinearLayout
                     android:id="@+id/form_and_records_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:visibility="visible">
+                    android:visibility="gone">
 
                 <!-- Campo de "Tipo de Calidad" -->
                 <com.google.android.material.textfield.TextInputLayout
@@ -117,7 +154,7 @@
                             style="@style/Widget.MaterialComponents.Button.UnelevatedButton"/>
                 </LinearLayout>
 
-                <!-- Contenedor de registros existentes (movido debajo de los botones) -->
+                <!-- Contenedor de registros existentes -->
                 <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -144,41 +181,6 @@
 
                 </LinearLayout>
             </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/hoja_ruta_container"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="16dp">
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_hoja_ruta_continuar"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:hint="Hoja de Ruta"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_hoja_ruta_continuar"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="text" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <Button
-                    android:id="@+id/btn_buscar_continuar"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Buscar"
-                    android:padding="16dp"
-                    android:layout_marginStart="8dp"
-                    android:backgroundTint="#2196F3"
-                    android:textColor="@android:color/white"
-                    style="@style/Widget.MaterialComponents.Button.UnelevatedButton"/>
-            </LinearLayout>
-
         </LinearLayout>
     </ScrollView>
 
