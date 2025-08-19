@@ -7,6 +7,7 @@
         android:layout_height="match_parent"
         tools:context=".ContinuarCargaActivity">
 
+    <!-- ScrollView para hacer todo el contenido deslizable -->
     <ScrollView
             android:id="@+id/main_content_scroll_view"
             android:layout_width="match_parent"
@@ -19,89 +20,26 @@
                 android:padding="16dp"
                 android:background="#F5F5F5">
 
+            <!-- Título de la actividad -->
             <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Continuar Carga"
+                    android:text="Continuar Registro"
                     android:textSize="28sp"
                     android:textStyle="bold"
                     android:textColor="#3F51B5"
                     android:layout_gravity="center_horizontal"
                     android:layout_marginBottom="24dp"/>
 
-            <!-- Formulario de búsqueda de Hoja de Ruta -->
-            <LinearLayout
-                    android:id="@+id/hoja_ruta_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="16dp">
-
-                <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/layout_hoja_ruta_continuar"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:hint="Hoja de Ruta"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/edit_hoja_ruta_continuar"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="text" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <Button
-                        android:id="@+id/btn_buscar_continuar"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Buscar"
-                        android:padding="16dp"
-                        android:layout_marginStart="8dp"
-                        android:backgroundTint="#2196F3"
-                        android:textColor="@android:color/white"
-                        style="@style/Widget.MaterialComponents.Button.UnelevatedButton"/>
-
-            </LinearLayout>
-
-            <!-- Contenedor del RecyclerView y el formulario de ingreso -->
+            <!-- Este es el contenedor del formulario que ahora se mostrará primero -->
             <LinearLayout
                     android:id="@+id/form_and_records_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:visibility="gone"> <!-- Se oculta por defecto -->
+                    android:visibility="visible">
 
-                <!-- Contenedor de registros existentes -->
-                <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="8dp"
-                        android:background="@drawable/border_rounded_with_shadow"
-                        android:layout_marginBottom="16dp">
-
-                    <TextView
-                            android:id="@+id/text_existing_records_title"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="8dp"
-                            android:textStyle="bold"
-                            android:textColor="#333333"
-                            android:text="Registros previamente ingresados para el artículo: " />
-
-                    <androidx.recyclerview.widget.RecyclerView
-                            android:id="@+id/recycler_view_existing_records"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:nestedScrollingEnabled="false"
-                            tools:listitem="@layout/item_inspection_history" />
-
-                </LinearLayout>
-
-                <!-- Formulario de ingreso de datos, idéntico a SegundoRegistroActivity -->
+                <!-- Campo de "Tipo de Calidad" -->
                 <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/layout_tipo_calidad"
                         android:layout_width="match_parent"
@@ -116,6 +54,7 @@
                             android:inputType="none"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Campo de "Tipo de Falla" (oculto por defecto) -->
                 <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/layout_tipo_de_falla"
                         android:layout_width="match_parent"
@@ -131,6 +70,7 @@
                             android:inputType="none"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Campo de "Metros de Tela" -->
                 <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/layout_metros_de_tela"
                         android:layout_width="match_parent"
@@ -145,6 +85,7 @@
                             android:inputType="numberDecimal"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Contenedor de botones "Continuar" y "Finalizar" -->
                 <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -176,11 +117,72 @@
                             style="@style/Widget.MaterialComponents.Button.UnelevatedButton"/>
                 </LinearLayout>
 
+                <!-- Contenedor de registros existentes (movido debajo de los botones) -->
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="8dp"
+                        android:background="@drawable/border_rounded_with_shadow"
+                        android:layout_marginTop="24dp">
+
+                    <TextView
+                            android:id="@+id/text_existing_records_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="8dp"
+                            android:textStyle="bold"
+                            android:textColor="#333333"
+                            android:text="Registros ingresados para el artículo:" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/recycler_view_existing_records"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false"
+                            tools:listitem="@layout/item_inspection_history" />
+
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/hoja_ruta_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layout_hoja_ruta_continuar"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Hoja de Ruta"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/edit_hoja_ruta_continuar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <Button
+                    android:id="@+id/btn_buscar_continuar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Buscar"
+                    android:padding="16dp"
+                    android:layout_marginStart="8dp"
+                    android:backgroundTint="#2196F3"
+                    android:textColor="@android:color/white"
+                    style="@style/Widget.MaterialComponents.Button.UnelevatedButton"/>
             </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
 
+    <!-- Overlay de carga y barra de progreso -->
     <View
             android:id="@+id/loading_overlay"
             android:layout_width="0dp"
