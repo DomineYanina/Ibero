@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ibero.data.Inspection
 import com.example.ibero.ui.CurrentSessionInspectionAdapter
+import com.example.ibero.ui.InspectionViewModel
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat

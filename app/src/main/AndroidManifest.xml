@@ -53,6 +53,10 @@
                 android:name=".TonalidadesActivity"
                 android:exported="false"/>
 
+        <activity
+                android:name=".ContinuarCargaActivity"
+                android:exported="false"/>
+
         <!-- Proveedor de archivos para compartir imágenes -->
         <provider
             android:name="androidx.core.content.FileProvider"

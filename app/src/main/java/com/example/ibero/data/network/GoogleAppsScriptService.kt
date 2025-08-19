@@ -45,6 +45,35 @@ data class TonalidadResponseItem(
     val rowNumber: Int // El número de fila es clave para la actualización
 )
 
+// NUEVOS modelos de datos para los registros de inspección del historial
+data class InspectionRecord(
+    @SerializedName("valorColumnaC") val valorColumnaC: String, // Fecha
+    @SerializedName("valorColumnaD") val valorColumnaD: String, // Hoja de Ruta
+    @SerializedName("valorColumnaE") val valorColumnaE: String, // Tejeduria
+    @SerializedName("valorColumnaF") val valorColumnaF: Int,    // Telar
+    @SerializedName("valorColumnaG") val valorColumnaG: Int,    // Tintoreria
+    @SerializedName("valorColumnaH") val valorColumnaH: String, // Articulo
+    @SerializedName("valorColumnaI") val valorColumnaI: Int,    // Color
+    @SerializedName("valorColumnaJ") val valorColumnaJ: Int,    // Rollo de Urdido
+    @SerializedName("valorColumnaK") val valorColumnaK: String, // Orden
+    @SerializedName("valorColumnaL") val valorColumnaL: Int,    // Cadena
+    @SerializedName("valorColumnaM") val valorColumnaM: Int,    // Ancho de Rollo
+    @SerializedName("valorColumnaN") val valorColumnaN: String, // Esmerilado
+    @SerializedName("valorColumnaO") val valorColumnaO: String, // Ignifugo
+    @SerializedName("valorColumnaP") val valorColumnaP: String, // Impermeable
+    @SerializedName("valorColumnaQ") val valorColumnaQ: String, // Otro
+    @SerializedName("valorColumnaS") val valorColumnaS: String, // Tipo de Calidad
+    @SerializedName("valorColumnaT") val valorColumnaT: String?, // Tipo de Falla
+    @SerializedName("valorColumnaU") val valorColumnaU: Double, // Metros de Tela
+    @SerializedName("valorColumnaA") val valorColumnaA: String?
+)
+
+data class InspectionRecordsResponse(
+    @SerializedName("status") val status: String,
+    @SerializedName("message") val message: String?,
+    @SerializedName("data") val data: List<InspectionRecord>?
+)
+
 interface GoogleAppsScriptService {
     @FormUrlEncoded
     @POST("exec")
@@ -55,8 +84,8 @@ interface GoogleAppsScriptService {
         @Field("fecha") fecha: String,
         @Field("hojaDeRuta") hojaDeRuta: String,
         @Field("tejeduria") tejeduria: String,
-        @Field("telar") telar: Int,
-        @Field("tintoreria") tintoreria: Int,
+        @Field("telar") telar: String,
+        @Field("tintoreria") tintoreria: String,
         @Field("articulo") articulo: String,
         @Field("color") color: Int,
         @Field("rolloDeUrdido") rolloDeUrdido: Int,
@@ -93,6 +122,13 @@ interface GoogleAppsScriptService {
         @Field("action") action: String = "checkHojaRutaExistence",
         @Field("hojaDeRuta") hojaDeRuta: String
     ): CheckHojaRutaResponse
+
+    @FormUrlEncoded
+    @POST("exec")
+    suspend fun findInspectionRecords(
+        @Field("action") action: String = "findInspectionRecords",
+        @Field("hojaDeRuta") hojaDeRuta: String
+    ): InspectionRecordsResponse
 }
 
 object GoogleSheetsApi {
@@ -100,7 +136,7 @@ object GoogleSheetsApi {
      * Pega aquí la URL de despliegue de tu Apps Script PERO sin el "/exec" final.
      */
     private const val BASE_URL =
-        "https://script.google.com/macros/s/AKfycbw2IMC8WgTLb23bRHZpjpc7lH9opF0wcWcwpqN2_bldP4UCsu2M8c0axugTexY1v6jp1Q/"
+        "https://script.google.com/macros/s/AKfycbx1iM9b8wjFknfL9p2dKtqH6f6EWaKmpw4QEhlGYavC7j7YRUjtcprVnMpVpSCq4kJXYg/"
 
     val service: GoogleAppsScriptService by lazy {
         val logging = HttpLoggingInterceptor().apply {

@@ -1,11 +1,13 @@
-package com.example.ibero
+package com.example.ibero.ui
 
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.*
+import com.example.ibero.ConnectionStatus
+import com.example.ibero.NetworkConnectivityObserver
 import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.Inspection
-import com.example.ibero.data.network.AddInspectionResponse // AÑADIDO: Nuevo modelo de respuesta
+import com.example.ibero.data.network.AddInspectionResponse
 import com.example.ibero.data.network.GoogleSheetsApi
 import com.example.ibero.repository.InspectionRepository
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.Date
 
 class InspectionViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -35,6 +38,9 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
 
     // Mutex para asegurar que solo una sincronización se ejecute a la vez
     private val syncMutex = Mutex()
+
+    // Variable para almacenar los datos de la sesión actual de carga, usando el modelo Inspection
+    private var sessionData: Inspection? = null
 
     init {
         val inspectionDao = AppDatabase.getDatabase(application).inspectionDao()
@@ -64,6 +70,71 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                     }
                 }
         }
+    }
+
+    /**
+     * Guarda la información de la sesión de carga.
+     * Es llamada desde la actividad para inicializar el ViewModel con los datos
+     * de la hoja de ruta encontrados.
+     * Convierte los campos de tipo String a Int para que coincidan con el modelo Inspection.
+     */
+    fun initSessionData(
+        usuario: String,
+        hojaDeRuta: String,
+        fecha: Date,
+        tejeduria: String,
+        telar: String,
+        tintoreria: String,
+        articulo: String,
+        color: String,
+        rolloDeUrdido: String,
+        orden: String,
+        cadena: String,
+        anchoDeRollo: String,
+        esmerilado: String,
+        ignifugo: String,
+        impermeable: String,
+        otro: String
+    ) {
+        try {
+            // Creamos un objeto Inspection para la sesión con los datos disponibles.
+            // Los campos que se añadirán más tarde se inicializan con valores por defecto.
+            sessionData = Inspection(
+                usuario = usuario,
+                fecha = fecha,
+                hojaDeRuta = hojaDeRuta,
+                tejeduria = tejeduria, // Corregido: tejeduria es de tipo String en tu clase Inspection
+                telar = telar.toIntOrNull() ?: 0,
+                tintoreria = tintoreria.toIntOrNull() ?: 0,
+                articulo = articulo,
+                color = color.toIntOrNull() ?: 0,
+                rolloDeUrdido = rolloDeUrdido.toIntOrNull() ?: 0,
+                orden = orden,
+                cadena = cadena.toIntOrNull() ?: 0,
+                anchoDeRollo = anchoDeRollo.toIntOrNull() ?: 0,
+                esmerilado = esmerilado,
+                ignifugo = ignifugo,
+                impermeable = impermeable,
+                otro = otro,
+                // Proporcionamos valores por defecto para los campos que aún no tienen valor
+                tipoCalidad = "", // Corregido: tipoCalidad no puede ser nulo en tu clase Inspection
+                tipoDeFalla = null, // Corregido: tipoDeFalla es un String nulo
+                metrosDeTela = 0.0,
+                uniqueId = "" // Corregido: uniqueId no puede ser nulo en tu clase Inspection
+            )
+        } catch (e: NumberFormatException) {
+            Log.e("ViewModel", "Error al convertir un campo de String a Int. Revisar los datos de entrada.", e)
+            throw e // Lanza la excepción para que la actividad pueda manejar el error
+        }
+    }
+
+    /**
+     * Retorna la información de la sesión actual.
+     * Es llamada desde la actividad para crear nuevos registros de inspección
+     * con los datos de la sesión.
+     */
+    fun getCurrentSessionData(): Inspection {
+        return sessionData ?: throw IllegalStateException("Session data not initialized.")
     }
 
     fun insertInspection(inspection: Inspection) = viewModelScope.launch {
@@ -137,9 +208,9 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                             usuario = inspection.usuario,
                             fecha = inspection.fecha.time.toString(),
                             hojaDeRuta = inspection.hojaDeRuta,
-                            tejeduria = inspection.tejeduria,
-                            telar = inspection.telar,
-                            tintoreria = inspection.tintoreria,
+                            tejeduria = inspection.tejeduria, // tejeduria es String
+                            telar = inspection.telar.toString(),
+                            tintoreria = inspection.tintoreria.toString(),
                             articulo = inspection.articulo,
                             color = inspection.color,
                             rolloDeUrdido = inspection.rolloDeUrdido,
@@ -204,9 +275,9 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                 usuario = inspection.usuario,
                 fecha = inspection.fecha.time.toString(),
                 hojaDeRuta = inspection.hojaDeRuta,
-                tejeduria = inspection.tejeduria,
-                telar = inspection.telar,
-                tintoreria = inspection.tintoreria,
+                tejeduria = inspection.tejeduria, // tejeduria es String
+                telar = inspection.telar.toString(),
+                tintoreria = inspection.tintoreria.toString(),
                 articulo = inspection.articulo,
                 color = inspection.color,
                 rolloDeUrdido = inspection.rolloDeUrdido,

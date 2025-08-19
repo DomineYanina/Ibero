@@ -48,4 +48,18 @@
             android:drawablePadding="8dp"
             android:layout_marginBottom="16dp"/>
 
+    <!-- Nuevo botón para continuar una carga existente -->
+    <Button
+            android:id="@+id/btn_continuar_carga"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Continuar Carga"
+            android:padding="16dp"
+            android:textSize="18sp"
+            android:backgroundTint="#FF9800"
+            android:textColor="@android:color/white"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+            android:drawableStart="@drawable/ic_history"
+            android:drawablePadding="8dp" />
+
 </LinearLayout>

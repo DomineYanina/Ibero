@@ -12,6 +12,7 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var btnNewRecord: Button
     private lateinit var loggedInUser: String
     private lateinit var btnAgregarTonalidades: Button
+    private lateinit var btnContinuarCarga: Button // Referencia al nuevo botón
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,6 +21,7 @@ class HomeActivity : AppCompatActivity() {
         textWelcome = findViewById(R.id.text_welcome)
         btnNewRecord = findViewById(R.id.btn_new_record)
         btnAgregarTonalidades = findViewById(R.id.btn_agregar_tonalidades)
+        btnContinuarCarga = findViewById(R.id.btn_continuar_carga) // Inicializar el nuevo botón
 
         loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario"
         textWelcome.text = "Bienvenido, $loggedInUser"
@@ -33,6 +35,13 @@ class HomeActivity : AppCompatActivity() {
         btnAgregarTonalidades.setOnClickListener {
             val intent = Intent(this, TonalidadesActivity::class.java)
             // Opcional: pasar el nombre de usuario
+            intent.putExtra("LOGGED_IN_USER", loggedInUser)
+            startActivity(intent)
+        }
+
+        // Configurar el listener para el nuevo botón
+        btnContinuarCarga.setOnClickListener {
+            val intent = Intent(this, ContinuarCargaActivity::class.java)
             intent.putExtra("LOGGED_IN_USER", loggedInUser)
             startActivity(intent)
         }

@@ -42,6 +42,8 @@ import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.Inspection
 import com.example.ibero.repository.InspectionRepository
 import com.example.ibero.ui.InspectionHistoryAdapter
+import com.example.ibero.ui.InspectionViewModel
+import com.example.ibero.data.HistoricalInspection
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
@@ -111,7 +113,6 @@ class MainActivity : AppCompatActivity() {
 
         initViews()
 
-        // Se corrigió la inicialización del ViewModel
         val factory = InspectionViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
@@ -188,7 +189,6 @@ class MainActivity : AppCompatActivity() {
             clearForm()
         }
 
-        // Se corrigió el listener para usar la función correcta del ViewModel
         btnForceSync.setOnClickListener {
             viewModel.performSync()
         }
@@ -216,7 +216,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun observeViewModel() {
         viewModel.allInspections.observe(this) { inspections ->
-            historyAdapter.submitList(inspections)
+            // Mapeamos de Inspection a HistoricalInspection antes de pasarlo al adaptador
+            val historicalInspections = inspections.map { inspection ->
+                HistoricalInspection(
+                    hojaDeRuta = "N/A", // No existe en esta actividad, se puede poner N/A o un valor por defecto
+                    articulo = inspection.articulo,
+                    tipoCalidad = "N/A", // No existe, se puede poner N/A
+                    tipoDeFalla = inspection.tipoDeFalla, // Mapeamos el tipo de defecto
+                    metrosDeTela = inspection.metrosDeTela, // Mapeamos la cantidad de muestra como metros de tela
+                    fecha = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(inspection.fecha)
+                )
+            }
+            // Se usa el método updateList, que es el que existe en tu adaptador.
+            historyAdapter.updateList(historicalInspections)
         }
 
         viewModel.syncMessage.observe(this) { message ->
@@ -227,9 +239,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     private fun setupHistoryRecyclerView() {
-        historyAdapter = InspectionHistoryAdapter { inspection ->
+        // Se corrigió la inicialización del adaptador para usar un constructor vacío
+        historyAdapter = InspectionHistoryAdapter(mutableListOf()) { inspection ->
             Toast.makeText(this, "Detalles de: ${inspection.articulo}", Toast.LENGTH_SHORT).show()
         }
         recyclerViewHistory.layoutManager = LinearLayoutManager(this)
@@ -281,7 +293,6 @@ class MainActivity : AppCompatActivity() {
 
     @Throws(IOException::class)
     private fun createImageFile(): File {
-
         val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         return File.createTempFile(
@@ -289,24 +300,19 @@ class MainActivity : AppCompatActivity() {
             ".jpg",
             storageDir
         ).apply {
-
             currentPhotoPath = absolutePath
         }
     }
 
     private fun dispatchTakePictureIntent() {
         Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
-
             takePictureIntent.resolveActivity(packageManager)?.also {
-
                 val photoFile: File? = try {
                     createImageFile()
                 } catch (ex: IOException) {
-
                     Toast.makeText(this, "Error al crear archivo de imagen: ${ex.message}", Toast.LENGTH_LONG).show()
                     null
                 }
-
                 photoFile?.also {
                     val photoURI: Uri = FileProvider.getUriForFile(
                         this,
