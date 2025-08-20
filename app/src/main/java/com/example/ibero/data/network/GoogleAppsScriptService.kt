@@ -1,5 +1,6 @@
 package com.example.ibero.data.network
 
+import com.example.ibero.data.HistoricalInspection
 import com.google.gson.annotations.SerializedName
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -8,6 +9,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.POST
+import retrofit2.http.Query
 import java.util.concurrent.TimeUnit
 
 // Modelos de datos para la nueva respuesta de addInspection
@@ -129,6 +131,7 @@ interface GoogleAppsScriptService {
         @Field("action") action: String = "findInspectionRecords",
         @Field("hojaDeRuta") hojaDeRuta: String
     ): InspectionRecordsResponse
+
 }
 
 object GoogleSheetsApi {
@@ -136,7 +139,7 @@ object GoogleSheetsApi {
      * Pega aquí la URL de despliegue de tu Apps Script PERO sin el "/exec" final.
      */
     private const val BASE_URL =
-        "https://script.google.com/macros/s/AKfycbx1iM9b8wjFknfL9p2dKtqH6f6EWaKmpw4QEhlGYavC7j7YRUjtcprVnMpVpSCq4kJXYg/"
+        "https://script.google.com/macros/s/AKfycbxflqwCs0_ZY2ipShIjAil2duFAoL1HoqHZxb28IXzOAG3vv_G_dXashFgqUO4V7DHkYA/"
 
     val service: GoogleAppsScriptService by lazy {
         val logging = HttpLoggingInterceptor().apply {

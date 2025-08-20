@@ -18,25 +18,23 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.ibero.R
 import com.example.ibero.data.HistoricalInspection
 import com.example.ibero.data.Inspection
+import com.example.ibero.data.network.GoogleSheetsApi
+import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.ui.InspectionHistoryAdapter
 import com.example.ibero.ui.InspectionViewModel
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputLayout
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.FormBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
-import org.json.JSONArray
-import org.json.JSONException
-import org.json.JSONObject
-import java.io.IOException
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
 
 class ContinuarCargaActivity : AppCompatActivity() {
 
-// Vistas de la interfaz de usuario, actualizadas para el nuevo layout
+    // Vistas de la interfaz de usuario
     private lateinit var editHojaDeRuta: EditText
     private lateinit var btnBuscar: MaterialButton
     private lateinit var recyclerViewExistingRecords: RecyclerView
@@ -45,7 +43,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
     private lateinit var loadingOverlay: View
     private lateinit var progressBar: View
 
-// Nuevos elementos del formulario de ingreso
+    // Elementos del formulario de ingreso
     private lateinit var spinnerTipoCalidad: AutoCompleteTextView
     private lateinit var layoutTipoFalla: TextInputLayout
     private lateinit var spinnerTipoFalla: AutoCompleteTextView
@@ -54,32 +52,34 @@ class ContinuarCargaActivity : AppCompatActivity() {
     private lateinit var btnGuardarRegistro: MaterialButton
     private lateinit var viewModel: InspectionViewModel
     private lateinit var historyAdapter: InspectionHistoryAdapter
-    private val client = OkHttpClient()
-    private val TAG = "ContinuarCargaLog" // Etiqueta para los logs
+    private val TAG = "ContinuarCargaLog"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_continuar_carga)
-        // Inicialización de vistas, actualizadas para los nuevos IDs
+        // Inicialización de vistas
         initViews()
         // Configuración del RecyclerView y el adaptador
         setupHistoryRecyclerView()
-        // Configuración de listeners para los botones y spinners
-        setupListeners()
         // Inicialización del ViewModel
         val factory = InspectionViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory)[InspectionViewModel::class.java]
+        // Configuración de listeners para los botones y spinners
+        setupListeners()
+        // Observa el estado de carga del ViewModel
+        observeViewModel()
     }
 
     private fun initViews() {
-    // Vistas actualizadas
+        editHojaDeRuta = findViewById(R.id.edit_hoja_ruta_continuar)
+        btnBuscar = findViewById(R.id.btn_buscar_continuar)
         recyclerViewExistingRecords = findViewById(R.id.recycler_view_existing_records)
         formAndRecordsContainer = findViewById(R.id.form_and_records_container)
         textExistingRecordsTitle = findViewById(R.id.text_existing_records_title)
         loadingOverlay = findViewById(R.id.loading_overlay)
         progressBar = findViewById(R.id.progress_bar)
 
-        // Nuevas vistas del formulario de ingreso
+        // Vistas del formulario de ingreso
         spinnerTipoCalidad = findViewById(R.id.spinner_tipo_calidad)
         layoutTipoFalla = findViewById(R.id.layout_tipo_de_falla)
         spinnerTipoFalla = findViewById(R.id.spinner_tipo_de_falla)
@@ -90,29 +90,44 @@ class ContinuarCargaActivity : AppCompatActivity() {
 
     private fun setupHistoryRecyclerView() {
         historyAdapter = InspectionHistoryAdapter(mutableListOf()) { historicalInspection ->
-        // Manejar clics en el historial (opcional)
+            // Manejar clics en el historial (opcional)
             Toast.makeText(this, "Hoja de Ruta: ${historicalInspection.hojaDeRuta}", Toast.LENGTH_SHORT).show()
         }
         recyclerViewExistingRecords.layoutManager = LinearLayoutManager(this)
         recyclerViewExistingRecords.adapter = historyAdapter
     }
 
+    private fun observeViewModel() {
+        // Observa el estado de carga del ViewModel para habilitar/deshabilitar vistas
+        viewModel.isLoading.observe(this) { isLoading ->
+            setViewsEnabled(!isLoading)
+        }
+        // Observa los mensajes de sincronización del ViewModel
+        viewModel.syncMessage.observe(this) { message ->
+            message?.let {
+                Toast.makeText(this, it, Toast.LENGTH_LONG).show()
+                viewModel.clearSyncMessage()
+            }
+        }
+    }
+
     private fun setupListeners() {
         btnBuscar.setOnClickListener {
-            val hojaDeRuta = editHojaDeRuta.text.toString().trim()
-            if (hojaDeRuta.isNotEmpty()) {
-                Log.d(TAG, "Botón 'Buscar' presionado. Hoja de Ruta: $hojaDeRuta")
-                checkHojaRutaExistence(hojaDeRuta)
+            val hojaDeRutaInput = editHojaDeRuta.text.toString().trim()
+            if (hojaDeRutaInput.isNotEmpty()) {
+                Log.d(TAG, "Botón 'Buscar' presionado. Hoja de Ruta: $hojaDeRutaInput")
+                // Llamamos a la nueva función de búsqueda y precarga
+                searchAndFetchRecords(hojaDeRutaInput)
             } else {
                 Toast.makeText(this, "Por favor, ingresa una Hoja de Ruta.", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Listener para el spinner de Tipo de Calidad
+        // Configuración de spinners
         val calidadTypes = arrayOf("Primera", "Segunda")
         val calidadAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, calidadTypes)
         spinnerTipoCalidad.setAdapter(calidadAdapter)
-        spinnerTipoCalidad.setOnItemClickListener { parent, view, position, id ->
+        spinnerTipoCalidad.setOnItemClickListener { parent, _, position, _ ->
             val selectedCalidad = parent.getItemAtPosition(position).toString()
             if (selectedCalidad == "Segunda") {
                 layoutTipoFalla.visibility = View.VISIBLE
@@ -122,7 +137,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
             }
         }
 
-        // Listener para el spinner de Tipo de Falla
         val fallaTypes = arrayOf("Aureolas", "Clareadas", "Falla de cadena", "Falla de trama", "Falla de urdido",
             "Gota Espaciada", "Goteras", "Hongos", "Mancha con patrón", "Manchas de aceite",
             "Marcas de sanforizado", "Parada de engomadora", "Parada telar", "Paradas",
@@ -130,18 +144,31 @@ class ContinuarCargaActivity : AppCompatActivity() {
         val fallaAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, fallaTypes)
         spinnerTipoFalla.setAdapter(fallaAdapter)
 
-        // Listener para el botón "Continuar" (btn_incorporar)
+        // Listener para el botón "Incorporar"
         btnIncorporar.setOnClickListener {
-            saveInspectionRecord(hojaDeRuta = editHojaDeRuta.text.toString().trim(), final = false)
+            if (validateForm()) {
+                saveInspectionAndResetForm()
+            } else {
+                Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
+            }
         }
 
-        // Listener para el botón "Finalizar" (btn_guardar_registro)
+        // Listener para el botón "Guardar Registro"
         btnGuardarRegistro.setOnClickListener {
-            saveInspectionRecord(hojaDeRuta = editHojaDeRuta.text.toString().trim(), final = true)
+            if (validateForm()) {
+                saveInspectionAndFinalize()
+            } else {
+                Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
+    /**
+     * Habilita o deshabilita las vistas de la pantalla.
+     * @param enabled El estado deseado para las vistas.
+     */
     private fun setViewsEnabled(enabled: Boolean) {
+        // Habilitar/deshabilitar vistas principales
         editHojaDeRuta.isEnabled = enabled
         btnBuscar.isEnabled = enabled
         btnIncorporar.isEnabled = enabled
@@ -155,206 +182,211 @@ class ContinuarCargaActivity : AppCompatActivity() {
         Log.d(TAG, "Estado de las vistas cambiado a: $enabled")
     }
 
-    private fun checkHojaRutaExistence(hojaDeRuta: String) {
+    /**
+     * Lógica de búsqueda y precarga de datos de la Hoja de Ruta.
+     * Reemplaza las funciones 'checkHojaRutaExistence' y 'findInspectionRecords' originales.
+     */
+    private fun searchAndFetchRecords(hojaDeRutaInput: String) {
         setViewsEnabled(false)
-        Toast.makeText(this@ContinuarCargaActivity, "Buscando Hoja de Ruta...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Buscando Hoja de Ruta e historial...", Toast.LENGTH_SHORT).show()
 
-        val formBody = FormBody.Builder()
-            .add("action", "checkHojaRutaExistence")
-            .add("hojaDeRuta", hojaDeRuta)
-            .build()
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // Se hace una sola llamada para obtener todos los registros
+                val response = GoogleSheetsApi2.service.findInspectionRecords(hojaDeRuta = hojaDeRutaInput)
 
-        val request = Request.Builder()
-            .url("https://script.google.com/macros/s/AKfycbx1iM9b8wjFknfL9p2dKtqH6f6EWaKmpw4QEhlGYavC7j7YRUjtcprVnMpVpSCq4kJXYg/exec")
-            .post(formBody)
-            .build()
+                withContext(Dispatchers.Main) {
+                    // Accedemos a la lista de registros directamente desde el objeto de respuesta
+                    val records = response.data.records
+                    if (response.status == "success" && records.isNotEmpty()) {
+                        Log.d(TAG, "Registros encontrados: ${records.size}")
 
-        Log.d(TAG, "Iniciando llamada a la API para verificar la existencia de la Hoja de Ruta.")
+                        // Usamos el primer registro para inicializar los datos de la sesión
+                        val firstRecord = records.first()
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e(TAG, "Error de red en checkHojaRutaExistence: ${e.message}")
-                runOnUiThread {
-                    Toast.makeText(this@ContinuarCargaActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
-                    setViewsEnabled(true)
-                }
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                response.body?.string()?.let { responseBody ->
-                    Log.d(TAG, "Respuesta del servidor (Hoja de Ruta): $responseBody")
-                    // Verificar si la respuesta es HTML en lugar de JSON
-                    if (responseBody.startsWith("<!DOCTYPE html>")) {
-                        Log.e(TAG, "El servidor devolvió una página HTML de error. La URL del script podría ser incorrecta o los permisos son insuficientes.")
-                        runOnUiThread {
-                            Toast.makeText(this@ContinuarCargaActivity, "Error: No se pudo conectar al servidor. Por favor, verifica la URL del script y los permisos.", Toast.LENGTH_LONG).show()
-                            setViewsEnabled(true)
-                        }
-                        return@let
-                    }
-                    try {
-                        val jsonResponse = JSONObject(responseBody)
-                        val status = jsonResponse.getString("status")
-                        val message = jsonResponse.getString("message")
-                        Log.d(TAG, "Status: $status, Message: $message")
-
-                        val dataObject = jsonResponse.optJSONObject("data")
-                        val exists = dataObject?.optBoolean("exists", false) ?: false
-                        Log.d(TAG, "Hoja de Ruta existe: $exists")
-
-                        runOnUiThread {
-                            if (status == "SUCCESS" && exists) {
-                                // Se encontró la hoja de ruta. Proceder a cargar historial y mostrar formulario.
-                                Toast.makeText(this@ContinuarCargaActivity, message, Toast.LENGTH_SHORT).show()
-                                textExistingRecordsTitle.text = "Registros para la Hoja de Ruta: $hojaDeRuta"
-                                formAndRecordsContainer.visibility = View.VISIBLE
-
-                                // Se carga el historial automáticamente
-                                findInspectionRecords(hojaDeRuta)
-                            } else {
-                                // No se encontró la hoja de ruta. El formulario no se muestra.
-                                Toast.makeText(this@ContinuarCargaActivity, "No se encontró la Hoja de Ruta.", Toast.LENGTH_LONG).show()
-                                formAndRecordsContainer.visibility = View.GONE
-                                setViewsEnabled(true)
-                            }
-                        }
-                    } catch (e: JSONException) {
-                        Log.e(TAG, "Error al procesar la respuesta JSON: ${e.message}")
-                        runOnUiThread {
-                            Toast.makeText(this@ContinuarCargaActivity, "Error al procesar la respuesta del servidor: ${e.message}", Toast.LENGTH_LONG).show()
-                            setViewsEnabled(true)
-                        }
-                    }
-                } ?: run {
-                    Log.e(TAG, "Respuesta del servidor vacía.")
-                    runOnUiThread {
-                        Toast.makeText(this@ContinuarCargaActivity, "Respuesta vacía del servidor.", Toast.LENGTH_LONG).show()
-                        setViewsEnabled(true)
-                    }
-                }
-            }
-        })
-    }
-
-    private fun findInspectionRecords(hojaDeRuta: String) {
-        setViewsEnabled(false)
-        Toast.makeText(this@ContinuarCargaActivity, "Buscando historial...", Toast.LENGTH_SHORT).show()
-
-        val formBody = FormBody.Builder()
-            .add("action", "findInspectionRecords")
-            .add("hojaDeRuta", hojaDeRuta)
-            .build()
-
-        val request = Request.Builder()
-            .url("https://script.google.com/macros/s/AKfycbx1iM9b8wjFknfL9p2dKtqH6f6EWaKmpw4QEhlGYavC7j7YRUjtcprVnMpVpSCq4kJXYg/exec")
-            .post(formBody)
-            .build()
-
-        Log.d(TAG, "Iniciando llamada a la API para encontrar historial.")
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e(TAG, "Error de red en findInspectionRecords: ${e.message}")
-                runOnUiThread {
-                    Toast.makeText(this@ContinuarCargaActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
-                    setViewsEnabled(true)
-                }
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                response.body?.string()?.let { responseBody ->
-                    Log.d(TAG, "Respuesta del servidor (Historial): $responseBody")
-                    try {
-                        val jsonResponse = JSONObject(responseBody)
-                        val status = jsonResponse.getString("status")
-                        Log.d(TAG, "Status del historial: $status")
-
-                        runOnUiThread {
-                            if (status == "success") {
-                                val dataArray = jsonResponse.getJSONObject("data").getJSONArray("data")
-                                val inspectionRecords = mutableListOf<HistoricalInspection>()
-                                for (i in 0 until dataArray.length()) {
-                                    val record = dataArray.getJSONObject(i)
-                                    val historicalInspection = HistoricalInspection(
-                                        hojaDeRuta = record.getString("valorColumnaD"),
-                                        articulo = record.getString("valorColumnaH"),
-                                        tipoCalidad = record.optString("valorColumnaS", ""),
-                                        // Usar optString para evitar crash si el valor es null
-                                        tipoDeFalla = record.optString("valorColumnaT", null),
-                                        // Usar optDouble para evitar crash si el valor es null
-                                        metrosDeTela = record.optDouble("valorColumnaU", 0.0),
-                                        fecha = record.getString("valorColumnaC")
-                                    )
-                                    inspectionRecords.add(historicalInspection)
+                        // Inicializamos el ViewModel con los datos de la sesión
+                        val dateFormat = SimpleDateFormat("E MMM dd yyyy HH:mm:ss 'GMT'Z (z)", Locale.US)
+                        firstRecord.tejeduria?.let {
+                            firstRecord.telar?.toString()?.let { it1 ->
+                                firstRecord.tintoreria?.toString()?.let { it2 ->
+                                    firstRecord.color?.toString()?.let { it3 ->
+                                        firstRecord.rolloDeUrdido?.toString()?.let { it4 ->
+                                            firstRecord.orden?.let { it5 ->
+                                                firstRecord.cadena?.toString()?.let { it6 ->
+                                                    firstRecord.anchoDeRollo?.toString()?.let { it7 ->
+                                                        firstRecord.esmerilado?.let { it8 ->
+                                                            firstRecord.ignifugo?.let { it9 ->
+                                                                firstRecord.impermeable?.let { it10 ->
+                                                                    firstRecord.otro?.let { it11 ->
+                                                                        viewModel.initSessionData(
+                                                                            usuario = firstRecord.usuario ?: "Usuario Desconocido",
+                                                                            hojaDeRuta = firstRecord.hojaDeRuta,
+                                                                            fecha = Date(),
+                                                                            tejeduria = it,
+                                                                            telar = firstRecord.telar.toString(),
+                                                                            tintoreria = firstRecord.tintoreria.toString(),
+                                                                            articulo = firstRecord.articulo,
+                                                                            color = firstRecord.color.toString(),
+                                                                            rolloDeUrdido = firstRecord.rolloDeUrdido.toString(),
+                                                                            orden = it5,
+                                                                            cadena = firstRecord.cadena.toString(),
+                                                                            anchoDeRollo = firstRecord.anchoDeRollo.toString(),
+                                                                            esmerilado = it8,
+                                                                            ignifugo = it9,
+                                                                            impermeable = it10,
+                                                                            otro = it11
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
-
-                                historyAdapter.updateList(inspectionRecords)
-                                Toast.makeText(this@ContinuarCargaActivity, "Historial cargado correctamente.", Toast.LENGTH_SHORT).show()
-                                setViewsEnabled(true)
-                            } else {
-                                Toast.makeText(this@ContinuarCargaActivity, jsonResponse.getString("message"), Toast.LENGTH_LONG).show()
-                                historyAdapter.updateList(emptyList()) // Limpia el historial
-                                setViewsEnabled(true)
                             }
                         }
 
-                    } catch (e: JSONException) {
-                        Log.e(TAG, "Error al procesar los datos de historial: ${e.message}")
-                        runOnUiThread {
-                            Toast.makeText(this@ContinuarCargaActivity, "Error al procesar los datos de historial: ${e.message}", Toast.LENGTH_LONG).show()
-                            setViewsEnabled(true)
-                        }
-                    }
-                } ?: run {
-                    Log.e(TAG, "Respuesta del historial vacía.")
-                    runOnUiThread {
-                        Toast.makeText(this@ContinuarCargaActivity, "Respuesta vacía del servidor.", Toast.LENGTH_LONG).show()
-                        setViewsEnabled(true)
+                        // Actualizamos la UI con los datos obtenidos
+                        textExistingRecordsTitle.text = "Registros para la Hoja de Ruta: ${firstRecord.hojaDeRuta} - Artículo: ${firstRecord.articulo}"
+                        formAndRecordsContainer.visibility = View.VISIBLE
+                        historyAdapter.updateList(records)
+                        Toast.makeText(this@ContinuarCargaActivity, "Hoja de Ruta encontrada. Historial cargado.", Toast.LENGTH_LONG).show()
+                    } else {
+                        // Si la respuesta es de éxito pero no hay datos, significa que no existe
+                        Toast.makeText(this@ContinuarCargaActivity, "No se encontraron registros para la Hoja de Ruta. Por favor, revisa el número.", Toast.LENGTH_LONG).show()
+                        formAndRecordsContainer.visibility = View.GONE
                     }
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error al buscar y precargar registros: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ContinuarCargaActivity, "Error de red o API: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    setViewsEnabled(true)
+                }
             }
-        })
+        }
     }
 
-    private fun saveInspectionRecord(hojaDeRuta: String, final: Boolean) {
-        // Validación de campos
-        val tipoCalidad = spinnerTipoCalidad.text.toString().trim()
-        val tipoFalla = if (layoutTipoFalla.visibility == View.VISIBLE) spinnerTipoFalla.text.toString().trim() else ""
-        val metrosDeTela = editMetrosDeTela.text.toString().trim()
 
-        if (tipoCalidad.isEmpty() || metrosDeTela.isEmpty() || (layoutTipoFalla.visibility == View.VISIBLE && tipoFalla.isEmpty())) {
-            Toast.makeText(this, "Por favor, completa todos los campos del nuevo registro.", Toast.LENGTH_SHORT).show()
-            Log.d(TAG, "Validación de campos fallida.")
-            return
-        }
+    private fun validateForm(): Boolean {
+        var isValid = true
 
-        // Aquí iría la lógica para enviar los datos al servidor o guardarlos localmente
-        // Por ahora, solo mostraremos un mensaje
-        Toast.makeText(this, "Registro guardado para la Hoja de Ruta: $hojaDeRuta. Tipo: $tipoCalidad", Toast.LENGTH_SHORT).show()
-        Log.d(TAG, "Registro a guardar: Hoja de Ruta: $hojaDeRuta, Tipo Calidad: $tipoCalidad, Metros: $metrosDeTela")
+        val tipoCalidadInput = spinnerTipoCalidad.text.toString().trim()
+        val tipoFallaInput = spinnerTipoFalla.text.toString().trim()
+        val metrosDeTelaInput = editMetrosDeTela.text.toString().trim()
 
-        if (final) {
-            // Lógica para el botón "Finalizar": limpiar todo y regresar a un estado inicial.
-            clearForm()
-            Log.d(TAG, "Limpiando formulario completo.")
+        if (tipoCalidadInput.isEmpty()) {
+            findViewById<TextInputLayout>(R.id.layout_tipo_calidad).error = "Tipo de Calidad es obligatorio"
+            isValid = false
         } else {
-            // Lógica para el botón "Continuar": limpiar el formulario de ingreso de datos
-            clearNewRecordForm()
-            Log.d(TAG, "Limpiando formulario de nuevo registro.")
+            findViewById<TextInputLayout>(R.id.layout_tipo_calidad).error = null
+        }
+
+        if (tipoCalidadInput == "Segunda" && tipoFallaInput.isEmpty()) {
+            findViewById<TextInputLayout>(R.id.layout_tipo_de_falla).error = "Tipo de Falla es obligatorio"
+            isValid = false
+        } else if (tipoCalidadInput == "Primera") {
+            findViewById<TextInputLayout>(R.id.layout_tipo_de_falla).error = null
+        }
+
+        if (metrosDeTelaInput.isEmpty()) {
+            findViewById<TextInputLayout>(R.id.layout_metros_de_tela).error = "Metros de Tela es obligatorio"
+            isValid = false
+        } else {
+            findViewById<TextInputLayout>(R.id.layout_metros_de_tela).error = null
+        }
+
+        return isValid
+    }
+
+    /**
+     * Crea un objeto Inspection a partir de los datos del formulario y los datos de sesión del ViewModel.
+     */
+    private fun createInspectionObject(): Inspection {
+        // Obtenemos los datos base que ya están cargados en el ViewModel
+        val sessionData = viewModel.getCurrentSessionData()
+
+        val tipoCalidad = spinnerTipoCalidad.text.toString()
+        val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoFalla.text.toString() else null
+        val metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
+
+        // Creamos un nuevo objeto de inspección copiando los datos de sesión y agregando los nuevos campos
+        return sessionData.copy(
+            // Asignamos un nuevo ID único para este registro específico
+            id = 0, // El ID de la base de datos local se generará automáticamente
+            uniqueId = UUID.randomUUID().toString(),
+            tipoCalidad = tipoCalidad,
+            tipoDeFalla = tipoDeFalla,
+            metrosDeTela = metrosDeTela,
+            isSynced = false, // Siempre es false al crear un nuevo registro
+            imagePaths = emptyList(),
+            imageUrls = emptyList()
+        )
+    }
+
+    /**
+     * Este método es para el botón "Continuar".
+     * Inserta el registro localmente.
+     */
+    private fun saveInspectionAndResetForm() {
+        val inspection = createInspectionObject()
+        lifecycleScope.launch {
+            viewModel.insertInspection(inspection)
+            resetNewRecordForm()
         }
     }
 
-    private fun clearForm() {
-        editHojaDeRuta.setText("")
-        formAndRecordsContainer.visibility = View.GONE
-        historyAdapter.updateList(emptyList())
-        clearNewRecordForm()
+    /**
+     * Este método es para el botón "Guardar Registro" y "Finalizar".
+     * Llama al método `finalizeAndSync` del ViewModel.
+     */
+    private fun saveInspectionAndFinalize() {
+        val inspection = createInspectionObject()
+        lifecycleScope.launch {
+            // Llama a la función suspendida para insertar y sincronizar de forma síncrona
+            val success = viewModel.finalizeAndSync(inspection)
+
+            // Limpiar la lista de registros de la sesión
+            viewModel.clearCurrentSessionList()
+
+            // Después de que la sincronización termine, redirigimos
+            if (success) {
+                Toast.makeText(this@ContinuarCargaActivity, "Registro subido y finalizado.", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this@ContinuarCargaActivity, "No se pudo subir a la nube. Guardado localmente. Finalizando.", Toast.LENGTH_LONG).show()
+            }
+
+            // Obtenemos el usuario de los datos de la sesión para pasarlo al HomeActivity
+            val userFromSession = viewModel.getCurrentSessionData().usuario
+            val intent = Intent(this@ContinuarCargaActivity, HomeActivity::class.java)
+            // Pasar el usuario para mantener la sesión
+            intent.putExtra("LOGGED_IN_USER", userFromSession)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+            startActivity(intent)
+            finish()
+        }
     }
 
-    private fun clearNewRecordForm() {
+    private fun resetNewRecordForm() {
         spinnerTipoCalidad.setText("", false)
         layoutTipoFalla.visibility = View.GONE
         spinnerTipoFalla.setText("", false)
         editMetrosDeTela.setText("")
+    }
+
+    /**
+     * Método no utilizado en el flujo actual, pero se mantiene por si es necesario.
+     */
+    private fun clearAllFormsAndState() {
+        editHojaDeRuta.setText("")
+        formAndRecordsContainer.visibility = View.GONE
+        historyAdapter.updateList(emptyList())
+        resetNewRecordForm()
     }
 }
