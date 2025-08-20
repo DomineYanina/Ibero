@@ -73,9 +73,11 @@ class TonalidadesActivity : AppCompatActivity() {
         }
 
         btnCancelar.setOnClickListener {
-            // Nuevo: Redirigir a HomeActivity al presionar "Cancelar"
-            val intent = Intent(this, HomeActivity::class.java)
-            startActivity(intent)
+            val loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
+            val homeIntent = Intent(this, HomeActivity::class.java)
+            homeIntent.putExtra("LOGGED_IN_USER", loggedInUser)
+
+            startActivity(homeIntent)
             finish()
         }
     }
