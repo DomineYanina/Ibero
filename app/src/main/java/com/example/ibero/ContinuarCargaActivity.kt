@@ -205,49 +205,34 @@ class ContinuarCargaActivity : AppCompatActivity() {
                         val firstRecord = records.first()
 
                         // Inicializamos el ViewModel con los datos de la sesión
-                        val dateFormat = SimpleDateFormat("E MMM dd yyyy HH:mm:ss 'GMT'Z (z)", Locale.US)
-                        firstRecord.tejeduria?.let {
-                            firstRecord.telar?.toString()?.let { it1 ->
-                                firstRecord.tintoreria?.toString()?.let { it2 ->
-                                    firstRecord.color?.toString()?.let { it3 ->
-                                        firstRecord.rolloDeUrdido?.toString()?.let { it4 ->
-                                            firstRecord.orden?.let { it5 ->
-                                                firstRecord.cadena?.toString()?.let { it6 ->
-                                                    firstRecord.anchoDeRollo?.toString()?.let { it7 ->
-                                                        firstRecord.esmerilado?.let { it8 ->
-                                                            firstRecord.ignifugo?.let { it9 ->
-                                                                firstRecord.impermeable?.let { it10 ->
-                                                                    firstRecord.otro?.let { it11 ->
-                                                                        viewModel.initSessionData(
-                                                                            usuario = firstRecord.usuario ?: "Usuario Desconocido",
-                                                                            hojaDeRuta = firstRecord.hojaDeRuta,
-                                                                            fecha = Date(),
-                                                                            tejeduria = it,
-                                                                            telar = firstRecord.telar.toString(),
-                                                                            tintoreria = firstRecord.tintoreria.toString(),
-                                                                            articulo = firstRecord.articulo,
-                                                                            color = firstRecord.color.toString(),
-                                                                            rolloDeUrdido = firstRecord.rolloDeUrdido.toString(),
-                                                                            orden = it5,
-                                                                            cadena = firstRecord.cadena.toString(),
-                                                                            anchoDeRollo = firstRecord.anchoDeRollo.toString(),
-                                                                            esmerilado = it8,
-                                                                            ignifugo = it9,
-                                                                            impermeable = it10,
-                                                                            otro = it11
-                                                                        )
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        // ******* INICIO DE LA SECCIÓN CRÍTICA Y CORREGIDA *******
+                        // Convertimos los valores Double? a Int de forma segura
+                        val telarInt = firstRecord.telar?.toInt() ?: 0
+                        val tintoreriaInt = firstRecord.tintoreria?.toInt() ?: 0
+                        val colorInt = firstRecord.color?.toInt() ?: 0
+                        val rolloDeUrdidoInt = firstRecord.rolloDeUrdido?.toInt() ?: 0
+                        val cadenaInt = firstRecord.cadena?.toInt() ?: 0
+                        val anchoDeRolloInt = firstRecord.anchoDeRollo?.toInt() ?: 0
+
+                        viewModel.initSessionData(
+                            usuario = firstRecord.usuario ?: "Usuario Desconocido",
+                            hojaDeRuta = firstRecord.hojaDeRuta,
+                            fecha = Date(), // La fecha del nuevo registro será la actual
+                            tejeduria = firstRecord.tejeduria ?: "",
+                            telar = telarInt.toString(),
+                            tintoreria = tintoreriaInt.toString(),
+                            articulo = firstRecord.articulo,
+                            color = colorInt.toString(),
+                            rolloDeUrdido = rolloDeUrdidoInt.toString(),
+                            orden = firstRecord.orden ?: "",
+                            cadena = cadenaInt.toString(),
+                            anchoDeRollo = anchoDeRolloInt.toString(),
+                            esmerilado = firstRecord.esmerilado ?: "",
+                            ignifugo = firstRecord.ignifugo ?: "",
+                            impermeable = firstRecord.impermeable ?: "",
+                            otro = firstRecord.otro ?: ""
+                        )
+                        // ******* FIN DE LA SECCIÓN CRÍTICA Y CORREGIDA *******
 
                         // Actualizamos la UI con los datos obtenidos
                         textExistingRecordsTitle.text = "Registros para la Hoja de Ruta: ${firstRecord.hojaDeRuta} - Artículo: ${firstRecord.articulo}"
