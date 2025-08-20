@@ -43,6 +43,7 @@ class PrimerRegistroActivity : AppCompatActivity() {
     private lateinit var editImpermeable: EditText
     private lateinit var editOtro: EditText
     private lateinit var btnNext: Button
+    private lateinit var btnCancelar: Button
 
     // --- CAMBIO AÑADIDO ---
     private lateinit var progressBar: ProgressBar
@@ -79,6 +80,7 @@ class PrimerRegistroActivity : AppCompatActivity() {
         editImpermeable = findViewById(R.id.edit_impermeable)
         editOtro = findViewById(R.id.edit_otro)
         btnNext = findViewById(R.id.btn_next)
+        btnCancelar = findViewById(R.id.btn_cancelar_primer_registro)
 
         // --- CAMBIO AÑADIDO ---
         progressBar = findViewById(R.id.progress_bar_loading)
@@ -122,6 +124,13 @@ class PrimerRegistroActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        btnCancelar.setOnClickListener {
+            // Nuevo: Redirigir a HomeActivity al presionar "Cancelar"
+            val intent = Intent(this, HomeActivity::class.java)
+            startActivity(intent)
+            finish()
         }
     }
 

@@ -18,7 +18,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.ibero.R
 import com.example.ibero.data.HistoricalInspection
 import com.example.ibero.data.Inspection
-import com.example.ibero.data.network.GoogleSheetsApi
 import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.ui.InspectionHistoryAdapter
 import com.example.ibero.ui.InspectionViewModel
@@ -37,6 +36,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
     // Vistas de la interfaz de usuario
     private lateinit var editHojaDeRuta: EditText
     private lateinit var btnBuscar: MaterialButton
+    private lateinit var btnCancelar: MaterialButton // Nuevo: Botón de cancelar
     private lateinit var recyclerViewExistingRecords: RecyclerView
     private lateinit var formAndRecordsContainer: LinearLayout
     private lateinit var textExistingRecordsTitle: TextView
@@ -73,6 +73,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
     private fun initViews() {
         editHojaDeRuta = findViewById(R.id.edit_hoja_ruta_continuar)
         btnBuscar = findViewById(R.id.btn_buscar_continuar)
+        btnCancelar = findViewById(R.id.btn_cancelar_continuar) // Nuevo: Inicializar el botón de cancelar
         recyclerViewExistingRecords = findViewById(R.id.recycler_view_existing_records)
         formAndRecordsContainer = findViewById(R.id.form_and_records_container)
         textExistingRecordsTitle = findViewById(R.id.text_existing_records_title)
@@ -123,6 +124,13 @@ class ContinuarCargaActivity : AppCompatActivity() {
             }
         }
 
+        btnCancelar.setOnClickListener {
+            // Nuevo: Redirigir a HomeActivity al presionar "Cancelar"
+            val intent = Intent(this, HomeActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
+
         // Configuración de spinners
         val calidadTypes = arrayOf("Primera", "Segunda")
         val calidadAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, calidadTypes)
@@ -171,6 +179,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
         // Habilitar/deshabilitar vistas principales
         editHojaDeRuta.isEnabled = enabled
         btnBuscar.isEnabled = enabled
+        btnCancelar.isEnabled = enabled // Nuevo: Habilitar/deshabilitar botón de cancelar
         btnIncorporar.isEnabled = enabled
         btnGuardarRegistro.isEnabled = enabled
         spinnerTipoCalidad.isEnabled = enabled

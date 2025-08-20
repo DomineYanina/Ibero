@@ -208,4 +208,18 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- Nuevo botón de "Cancelar" anclado en la parte inferior -->
+    <Button
+            android:id="@+id/btn_cancelar_continuar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Cancelar"
+            android:backgroundTint="#FA0000"
+            android:textColor="@android:color/white"
+            android:padding="16dp"
+            android:layout_margin="16dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

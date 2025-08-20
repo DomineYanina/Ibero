@@ -1,106 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
         xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:context=".SegundoRegistroActivity">
 
+    <!-- ScrollView para el contenido principal, restringido para dejar espacio al botón de "Cancelar" -->
     <ScrollView
             android:id="@+id/main_content_scroll_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toTopOf="@+id/btn_cancelar_segundo_registro"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="#F5F5F5"
                 android:orientation="vertical"
-                android:padding="16dp"
-                android:background="#F5F5F5">
+                android:padding="16dp">
 
             <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Continuar Registro"
-                    android:textSize="28sp"
-                    android:textStyle="bold"
-                    android:textColor="#3F51B5"
                     android:layout_gravity="center_horizontal"
-                    android:layout_marginBottom="24dp"/>
+                    android:layout_marginBottom="24dp"
+                    android:text="Continuar Registro"
+                    android:textColor="#3F51B5"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/layout_tipo_calidad"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Tipo de Calidad"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                    android:layout_marginBottom="12dp">
+                    android:layout_marginBottom="12dp"
+                    android:hint="Tipo de Calidad">
+
                 <AutoCompleteTextView
                         android:id="@+id/spinner_tipo_calidad"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="none"/>
+                        android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/layout_tipo_de_falla"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
                     android:hint="Tipo de Falla"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                    android:visibility="gone"
-                    android:layout_marginBottom="12dp">
+                    android:visibility="gone">
+
                 <AutoCompleteTextView
                         android:id="@+id/spinner_tipo_de_falla"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="none"/>
+                        android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/layout_metros_de_tela"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Metros de Tela"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_marginBottom="24dp">
+                    android:layout_marginBottom="24dp"
+                    android:hint="Metros de Tela">
+
                 <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/edit_metros_de_tela"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="numberDecimal"/>
+                        android:inputType="numberDecimal" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="16dp">
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
 
                 <Button
                         android:id="@+id/btn_incorporar"
+                        style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Continuar"
-                        android:padding="16dp"
                         android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
                         android:backgroundTint="#4CAF50"
-                        android:textColor="@android:color/white"
-                        style="@style/Widget.MaterialComponents.Button.UnelevatedButton"/>
+                        android:padding="16dp"
+                        android:text="Continuar"
+                        android:textColor="@android:color/white" />
 
                 <Button
                         android:id="@+id/btn_guardar_registro"
+                        style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Finalizar"
-                        android:padding="16dp"
                         android:layout_marginStart="8dp"
+                        android:layout_weight="1"
                         android:backgroundTint="#F44336"
-                        android:textColor="@android:color/white"
-                        style="@style/Widget.MaterialComponents.Button.UnelevatedButton"/>
+                        android:padding="16dp"
+                        android:text="Finalizar"
+                        android:textColor="@android:color/white" />
             </LinearLayout>
 
             <LinearLayout
@@ -114,9 +121,10 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        tools:text="Registros ingresados para el artículo: 3080P"
+                        android:text="Registros ingresados para el artículo: 3080P"
                         android:textAppearance="?attr/textAppearanceListItem"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        tools:text="Registros ingresados para el artículo: 3080P" />
 
                 <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/recycler_view_current_session_records"
@@ -125,12 +133,11 @@
                         android:layout_marginTop="8dp"
                         android:nestedScrollingEnabled="false"
                         tools:listitem="@layout/item_current_session_inspection" />
-
             </LinearLayout>
-
         </LinearLayout>
     </ScrollView>
 
+    <!-- Overlay de carga y barra de progreso -->
     <View
             android:id="@+id/loading_overlay"
             android:layout_width="0dp"
@@ -139,19 +146,32 @@
             android:clickable="true"
             android:focusable="true"
             android:visibility="gone"
-            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="parent" />
 
     <ProgressBar
             android:id="@+id/progress_bar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- Nuevo botón de "Cancelar" anclado en la parte inferior -->
+    <Button
+            android:id="@+id/btn_cancelar_segundo_registro"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:backgroundTint="#FA0000"
+            android:padding="16dp"
+            android:text="Cancelar"
+            android:textColor="@android:color/white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

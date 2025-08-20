@@ -19,12 +19,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.content.Intent
 
 class TonalidadesActivity : AppCompatActivity() {
 
     private lateinit var editHojaRuta: TextInputEditText // Usamos el tipo correcto
     private lateinit var btnBuscar: Button
     private lateinit var btnGuardar: Button
+    private lateinit var btnCancelar: Button // Nuevo: Botón de cancelar
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: TonalidadesAdapter
     private lateinit var progressBar: ProgressBar // Referencia a la nueva barra de progreso
@@ -48,6 +50,7 @@ class TonalidadesActivity : AppCompatActivity() {
         editHojaRuta = findViewById(R.id.edit_hoja_ruta_tonalidad)
         btnBuscar = findViewById(R.id.btn_buscar_tonalidades)
         btnGuardar = findViewById(R.id.btn_guardar_tonalidades)
+        btnCancelar = findViewById(R.id.btn_cancelar_tonalidades) // Nuevo: Inicializar el botón de cancelar
         recyclerView = findViewById(R.id.recycler_view_tonalidades)
     }
 
@@ -67,6 +70,13 @@ class TonalidadesActivity : AppCompatActivity() {
             // Inicia el estado de carga al iniciar el guardado
             toggleLoadingState(true)
             guardarTonalidades()
+        }
+
+        btnCancelar.setOnClickListener {
+            // Nuevo: Redirigir a HomeActivity al presionar "Cancelar"
+            val intent = Intent(this, HomeActivity::class.java)
+            startActivity(intent)
+            finish()
         }
     }
 
@@ -168,6 +178,7 @@ class TonalidadesActivity : AppCompatActivity() {
         editHojaRuta.isEnabled = !isLoading
         btnBuscar.isEnabled = !isLoading
         btnGuardar.isEnabled = !isLoading
+        btnCancelar.isEnabled = !isLoading // Nuevo: Habilitar/deshabilitar botón de cancelar
 
         // El RecyclerView no tiene una propiedad `isEnabled`, pero puedes cambiar su opacidad
         formContainer.alpha = if (isLoading) 0.5f else 1.0f

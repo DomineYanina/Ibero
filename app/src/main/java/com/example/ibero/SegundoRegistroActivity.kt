@@ -35,6 +35,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var editMetrosDeTela: EditText
     private lateinit var btnGuardarRegistro: Button
     private lateinit var btnIncorporar: Button
+    private lateinit var btnCancelar: Button
 
     private lateinit var recyclerViewCurrentSessionRecords: RecyclerView
     private lateinit var currentSessionInspectionAdapter: CurrentSessionInspectionAdapter
@@ -145,6 +146,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         btnIncorporar = findViewById(R.id.btn_incorporar)
         recyclerViewCurrentSessionRecords = findViewById(R.id.recycler_view_current_session_records)
         textSessionTitle = findViewById(R.id.text_session_title)
+        btnCancelar = findViewById(R.id.btn_cancelar_segundo_registro)
     }
 
     private fun setupSpinners() {
@@ -187,6 +189,13 @@ class SegundoRegistroActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        btnCancelar.setOnClickListener {
+            // Nuevo: Redirigir a HomeActivity al presionar "Cancelar"
+            val intent = Intent(this, HomeActivity::class.java)
+            startActivity(intent)
+            finish()
         }
     }
 
