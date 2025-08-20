@@ -73,8 +73,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
 
     private fun initViews() {
     // Vistas actualizadas
-        editHojaDeRuta = findViewById(R.id.edit_hoja_ruta_continuar)
-        btnBuscar = findViewById(R.id.btn_buscar_continuar)
         recyclerViewExistingRecords = findViewById(R.id.recycler_view_existing_records)
         formAndRecordsContainer = findViewById(R.id.form_and_records_container)
         textExistingRecordsTitle = findViewById(R.id.text_existing_records_title)
@@ -111,12 +109,12 @@ class ContinuarCargaActivity : AppCompatActivity() {
         }
 
         // Listener para el spinner de Tipo de Calidad
-        val calidadTypes = arrayOf("1ra", "2da", "Rechazado", "Otro")
+        val calidadTypes = arrayOf("Primera", "Segunda")
         val calidadAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, calidadTypes)
         spinnerTipoCalidad.setAdapter(calidadAdapter)
         spinnerTipoCalidad.setOnItemClickListener { parent, view, position, id ->
             val selectedCalidad = parent.getItemAtPosition(position).toString()
-            if (selectedCalidad == "2da" || selectedCalidad == "Rechazado") {
+            if (selectedCalidad == "Segunda") {
                 layoutTipoFalla.visibility = View.VISIBLE
             } else {
                 layoutTipoFalla.visibility = View.GONE
@@ -125,7 +123,10 @@ class ContinuarCargaActivity : AppCompatActivity() {
         }
 
         // Listener para el spinner de Tipo de Falla
-        val fallaTypes = arrayOf("Agujero", "Mancha", "Hebra corrida", "Hebra de otro color", "Doble urdimbre", "Hebra suelta", "Falla de acabado", "Falla de tejeduría", "Falla de estampado")
+        val fallaTypes = arrayOf("Aureolas", "Clareadas", "Falla de cadena", "Falla de trama", "Falla de urdido",
+            "Gota Espaciada", "Goteras", "Hongos", "Mancha con patrón", "Manchas de aceite",
+            "Marcas de sanforizado", "Parada de engomadora", "Parada telar", "Paradas",
+            "Quebraduras", "Vainillas")
         val fallaAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, fallaTypes)
         spinnerTipoFalla.setAdapter(fallaAdapter)
 

@@ -16,8 +16,6 @@ class InspectionHistoryAdapter(
 ) : RecyclerView.Adapter<InspectionHistoryAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val articleRefTextView: TextView = view.findViewById(R.id.text_article_ref)
-        val dateTextView: TextView = view.findViewById(R.id.text_date)
         val resultTextView: TextView = view.findViewById(R.id.text_result)
         val failTextView: TextView = view.findViewById(R.id.text_fail)
         val metrosTextView: TextView = view.findViewById(R.id.text_metros)
@@ -33,8 +31,6 @@ class InspectionHistoryAdapter(
         val inspection = inspections[position]
 
         // Enlazar los datos a las vistas. Usamos las columnas R, S y T.
-        holder.articleRefTextView.text = "Hoja de Ruta: ${inspection.hojaDeRuta}"
-        holder.dateTextView.text = "Fecha: ${inspection.fecha}"
         holder.resultTextView.text = "Tipo de Calidad: ${inspection.tipoCalidad}"
         holder.metrosTextView.text = "Metros: ${inspection.metrosDeTela}"
 
