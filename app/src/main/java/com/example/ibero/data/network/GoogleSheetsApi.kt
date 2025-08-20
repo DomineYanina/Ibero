@@ -16,7 +16,7 @@ interface GoogleSheetsApiService {
 }
 
 object GoogleSheetsApi2 {
-    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbxflqwCs0_ZY2ipShIjAil2duFAoL1HoqHZxb28IXzOAG3vv_G_dXashFgqUO4V7DHkYA/"
+    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbyMPARoOA3VpB28wo7pMT5gKPikS29NLGIEyUxxv0P9h1FJL2ZK7IyUMYvczTCBgIai/"
 
     val service: GoogleSheetsApiService by lazy {
         Retrofit.Builder()

@@ -2,6 +2,7 @@ package com.example.ibero
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
@@ -36,6 +37,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var btnGuardarRegistro: Button
     private lateinit var btnIncorporar: Button
     private lateinit var btnCancelar: Button
+    private lateinit var btnVolver: Button
 
     private lateinit var recyclerViewCurrentSessionRecords: RecyclerView
     private lateinit var currentSessionInspectionAdapter: CurrentSessionInspectionAdapter
@@ -45,7 +47,8 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var loadingOverlay: View
 
-    // Datos de la primera pantalla que se mantienen
+    // Datos de la primera pantalla que se mantienen.
+    // *** CORRECCIÓN: Los campos numéricos vuelven a ser Int, asumiendo que nunca son nulos. ***
     private lateinit var usuario: String
     private lateinit var fecha: String
     private lateinit var hojaDeRuta: String
@@ -70,7 +73,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         val factory = InspectionViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
-        // Obtener datos de la actividad anterior
+        // *** CORRECCIÓN: Volvemos a obtener los datos como Int con un valor por defecto. ***
         usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
         fecha = intent.getStringExtra("FECHA") ?: ""
         hojaDeRuta = intent.getStringExtra("HOJA_DE_RUTA") ?: ""
@@ -147,6 +150,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         recyclerViewCurrentSessionRecords = findViewById(R.id.recycler_view_current_session_records)
         textSessionTitle = findViewById(R.id.text_session_title)
         btnCancelar = findViewById(R.id.btn_cancelar_segundo_registro)
+        btnVolver = findViewById(R.id.btn_volver)
     }
 
     private fun setupSpinners() {
@@ -197,6 +201,15 @@ class SegundoRegistroActivity : AppCompatActivity() {
             homeIntent.putExtra("LOGGED_IN_USER", loggedInUser)
 
             startActivity(homeIntent)
+            finish()
+        }
+
+        btnVolver.setOnClickListener {
+            val backIntent = Intent(this, PrimerRegistroActivity::class.java)
+            // *** Mantenemos la lógica de pasar los datos como en la actividad anterior.
+            // Si los campos son Int, los pasamos como Int.
+            backIntent.putExtras(intent.extras ?: Bundle())
+            startActivity(backIntent)
             finish()
         }
     }
@@ -258,6 +271,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         val inspectionDate = dateFormat.parse(fecha) ?: Date()
         val uniqueId = UUID.randomUUID().toString()
 
+        // *** CORRECCIÓN: Pasamos los valores Int directamente al constructor. ***
         return Inspection(
             usuario = usuario,
             fecha = inspectionDate,

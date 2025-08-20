@@ -32,9 +32,15 @@ class TonalidadesActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar // Referencia a la nueva barra de progreso
     private lateinit var formContainer: LinearLayout // Referencia al nuevo contenedor
 
+    // CAMBIO 1: Variable para guardar el nombre del usuario logeado
+    private var loggedInUser: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_tonalidades)
+
+        // Obtener el nombre de usuario del Intent
+        loggedInUser = intent.getStringExtra("LOGGED_IN_USER")
 
         initViews()
         setupListeners()
@@ -142,10 +148,15 @@ class TonalidadesActivity : AppCompatActivity() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // ... (código de mapeo y llamada a la API, sin cambios aquí)
+                // CAMBIO 2: Incluir el nombre del usuario en el objeto de actualización
                 val updates = registrosAActualizar.map {
-                    mapOf("rowNumber" to it.uniqueId.toInt(), "nuevaTonalidad" to it.nuevaTonalidad)
+                    mapOf(
+                        "rowNumber" to it.uniqueId.toInt(),
+                        "nuevaTonalidad" to it.nuevaTonalidad,
+                        "usuario" to (loggedInUser ?: "Usuario Desconocido") // Añade el usuario aquí
+                    )
                 }
+
                 val gson = Gson()
                 val updatesJson = gson.toJson(updates)
                 val response = GoogleSheetsApi.service.updateTonalidades(updates = updatesJson)

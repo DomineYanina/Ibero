@@ -139,7 +139,7 @@ object GoogleSheetsApi {
      * Pega aquí la URL de despliegue de tu Apps Script PERO sin el "/exec" final.
      */
     private const val BASE_URL =
-        "https://script.google.com/macros/s/AKfycbxflqwCs0_ZY2ipShIjAil2duFAoL1HoqHZxb28IXzOAG3vv_G_dXashFgqUO4V7DHkYA/"
+        "https://script.google.com/macros/s/AKfycbyMPARoOA3VpB28wo7pMT5gKPikS29NLGIEyUxxv0P9h1FJL2ZK7IyUMYvczTCBgIai/"
 
     val service: GoogleAppsScriptService by lazy {
         val logging = HttpLoggingInterceptor().apply {

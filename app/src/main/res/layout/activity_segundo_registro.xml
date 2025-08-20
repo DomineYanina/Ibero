@@ -6,12 +6,12 @@
         android:layout_height="match_parent"
         tools:context=".SegundoRegistroActivity">
 
-    <!-- ScrollView para el contenido principal, restringido para dejar espacio al botón de "Cancelar" -->
+    <!-- ScrollView para el contenido principal, restringido para dejar espacio a los botones inferiores -->
     <ScrollView
             android:id="@+id/main_content_scroll_view"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            app:layout_constraintBottom_toTopOf="@+id/btn_cancelar_segundo_registro"
+            app:layout_constraintBottom_toTopOf="@+id/button_container"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
@@ -161,17 +161,41 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Nuevo botón de "Cancelar" anclado en la parte inferior -->
-    <Button
-            android:id="@+id/btn_cancelar_segundo_registro"
+    <!-- Contenedor para los botones "Volver" y "Cancelar" -->
+    <LinearLayout
+            android:id="@+id/button_container"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:layout_margin="16dp"
-            android:backgroundTint="#FA0000"
-            android:padding="16dp"
-            android:text="Cancelar"
-            android:textColor="@android:color/white"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Botón de "Volver" -->
+        <Button
+                android:id="@+id/btn_volver"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:backgroundTint="#3F51B5"
+                android:textColor="@android:color/white"
+                android:padding="16dp"
+                android:text="Volver" />
+
+        <!-- Botón de "Cancelar" -->
+        <Button
+                android:id="@+id/btn_cancelar_segundo_registro"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:backgroundTint="#FA0000"
+                android:textColor="@android:color/white"
+                android:padding="16dp"
+                android:text="Cancelar" />
+
+    </LinearLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
