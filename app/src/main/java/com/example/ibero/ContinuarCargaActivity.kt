@@ -215,7 +215,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
                         val anchoDeRolloInt = firstRecord.anchoDeRollo?.toInt() ?: 0
 
                         viewModel.initSessionData(
-                            usuario = firstRecord.usuario ?: "Usuario Desconocido",
+                            usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido",
                             hojaDeRuta = firstRecord.hojaDeRuta,
                             fecha = Date(), // La fecha del nuevo registro será la actual
                             tejeduria = firstRecord.tejeduria ?: "",
