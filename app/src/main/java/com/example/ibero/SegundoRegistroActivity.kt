@@ -2,16 +2,10 @@ package com.example.ibero
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
+import android.widget.*
 import android.view.View
-import android.widget.ArrayAdapter
-import android.widget.AutoCompleteTextView
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ProgressBar
-import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -25,6 +19,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import androidx.core.widget.addTextChangedListener
 
 class SegundoRegistroActivity : AppCompatActivity() {
 
@@ -43,12 +38,10 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var currentSessionInspectionAdapter: CurrentSessionInspectionAdapter
     private lateinit var textSessionTitle: TextView
 
-    // Nuevas variables para el estado de carga
     private lateinit var progressBar: ProgressBar
     private lateinit var loadingOverlay: View
 
-    // Datos de la primera pantalla que se mantienen.
-    // *** CORRECCIÓN: Los campos numéricos vuelven a ser Int, asumiendo que nunca son nulos. ***
+    // Datos recibidos
     private lateinit var usuario: String
     private lateinit var fecha: String
     private lateinit var hojaDeRuta: String
@@ -73,7 +66,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         val factory = InspectionViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
-        // *** CORRECCIÓN: Volvemos a obtener los datos como Int con un valor por defecto. ***
+        // Datos de la Activity anterior
         usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
         fecha = intent.getStringExtra("FECHA") ?: ""
         hojaDeRuta = intent.getStringExtra("HOJA_DE_RUTA") ?: ""
@@ -96,37 +89,56 @@ class SegundoRegistroActivity : AppCompatActivity() {
         setupListeners()
         setupCurrentSessionRecyclerView()
 
-        // Inicializar las nuevas vistas
         progressBar = findViewById(R.id.progress_bar)
         loadingOverlay = findViewById(R.id.loading_overlay)
 
-        // Actualizar el título con el artículo
+        // 🔹 1) Al iniciar, Continuar y Finalizar deshabilitados
+        btnIncorporar.isVisible = false
+        btnGuardarRegistro.isVisible = false
+        //btnIncorporar.isEnabled = false
+        //btnGuardarRegistro.isEnabled = false
+
+        // 🔹 2) Monitoreo de campos
+        setupFieldWatchers()
+
         textSessionTitle.text = "Registros ingresados para el artículo: $articulo"
 
-        // Observar el estado de carga del ViewModel
+        // Observa el estado de carga del ViewModel
         viewModel.isLoading.observe(this) { isLoading ->
             if (isLoading) {
                 progressBar.visibility = View.VISIBLE
                 loadingOverlay.visibility = View.VISIBLE
 
-                btnIncorporar.isEnabled = false
+
+                btnIncorporar.isVisible = false
+                btnGuardarRegistro.isVisible = false
+                spinnerTipoCalidad.isVisible = false
+                spinnerTipoDeFalla.isVisible = false
+                editMetrosDeTela.isVisible = false
+
+
+                /*btnIncorporar.isEnabled = false
                 btnGuardarRegistro.isEnabled = false
                 spinnerTipoCalidad.isEnabled = false
                 spinnerTipoDeFalla.isEnabled = false
-                editMetrosDeTela.isEnabled = false
+                editMetrosDeTela.isEnabled = false*/
             } else {
                 progressBar.visibility = View.GONE
                 loadingOverlay.visibility = View.GONE
 
-                btnIncorporar.isEnabled = true
-                btnGuardarRegistro.isEnabled = true
-                spinnerTipoCalidad.isEnabled = true
+
+                spinnerTipoCalidad.isVisible = true
+                spinnerTipoDeFalla.isVisible = true
+                editMetrosDeTela.isVisible = true
+
+                /*spinnerTipoCalidad.isEnabled = true
                 spinnerTipoDeFalla.isEnabled = true
-                editMetrosDeTela.isEnabled = true
+                editMetrosDeTela.isEnabled = true*/
+                toggleButtonsBasedOnInput()
             }
         }
 
-        // Observa los mensajes de sincronización del ViewModel para mostrarlos al usuario
+        // Observa los mensajes de sincronización
         viewModel.syncMessage.observe(this) { message ->
             message?.let {
                 Toast.makeText(this, it, Toast.LENGTH_LONG).show()
@@ -134,7 +146,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
             }
         }
 
-        // Observa la lista de registros de la sesión actual
+        // Observa la lista de registros
         viewModel.currentSessionInspections.observe(this) { inspections ->
             currentSessionInspectionAdapter.updateList(inspections)
         }
@@ -182,6 +194,10 @@ class SegundoRegistroActivity : AppCompatActivity() {
         btnIncorporar.setOnClickListener {
             if (validateForm()) {
                 saveInspectionAndResetForm()
+
+                btnVolver.isVisible = false
+                //btnVolver.isEnabled = false
+                btnCancelar.text = "Ir a Inicio"
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
             }
@@ -199,15 +215,12 @@ class SegundoRegistroActivity : AppCompatActivity() {
             val loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
             val homeIntent = Intent(this, HomeActivity::class.java)
             homeIntent.putExtra("LOGGED_IN_USER", loggedInUser)
-
             startActivity(homeIntent)
             finish()
         }
 
         btnVolver.setOnClickListener {
             val backIntent = Intent(this, PrimerRegistroActivity::class.java)
-            // *** Mantenemos la lógica de pasar los datos como en la actividad anterior.
-            // Si los campos son Int, los pasamos como Int.
             backIntent.putExtras(intent.extras ?: Bundle())
             startActivity(backIntent)
             finish()
@@ -220,11 +233,38 @@ class SegundoRegistroActivity : AppCompatActivity() {
         recyclerViewCurrentSessionRecords.adapter = currentSessionInspectionAdapter
     }
 
-    /**
-     * Este método es para el botón "Continuar".
-     * Inserta el registro localmente, y la sincronización se dispara de forma
-     * reactiva por la observación de la base de datos y la red.
-     */
+    private fun setupFieldWatchers() {
+        editMetrosDeTela.addTextChangedListener { toggleButtonsBasedOnInput() }
+        spinnerTipoCalidad.addTextChangedListener { toggleButtonsBasedOnInput() }
+        spinnerTipoDeFalla.addTextChangedListener { toggleButtonsBasedOnInput() }
+    }
+
+    private fun toggleButtonsBasedOnInput() {
+        val hayInput = spinnerTipoCalidad.text.isNotBlank() ||
+                spinnerTipoDeFalla.text.isNotBlank() ||
+                editMetrosDeTela.text.isNotBlank()
+
+        if (hayInput) {
+            btnCancelar.isVisible = false
+            btnVolver.isVisible = false
+            btnIncorporar.isVisible = true
+            btnGuardarRegistro.isVisible = true
+            //btnCancelar.isEnabled = false
+            //btnVolver.isEnabled = false
+            //btnIncorporar.isEnabled = true
+            //btnGuardarRegistro.isEnabled = true
+        } else {
+            btnCancelar.isVisible = true
+            btnVolver.isVisible = true
+            btnIncorporar.isVisible = false
+            btnGuardarRegistro.isVisible = false
+            //btnCancelar.isEnabled = true
+            //btnVolver.isEnabled = true
+            //btnIncorporar.isEnabled = false
+            //btnGuardarRegistro.isEnabled = false
+        }
+    }
+
     private fun saveInspectionAndResetForm() {
         val inspection = createInspectionObject()
         lifecycleScope.launch {
@@ -233,27 +273,16 @@ class SegundoRegistroActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Este método es para el botón "Finalizar".
-     * Llama al método `finalizeAndSync` del ViewModel para asegurarse
-     * de que el registro se suba a la nube antes de redirigir.
-     */
     private fun saveInspectionAndFinalize() {
         val inspection = createInspectionObject()
         lifecycleScope.launch {
-            // Llama a la nueva función suspendida para insertar y sincronizar de forma síncrona
             val success = viewModel.finalizeAndSync(inspection)
-
-            // Limpiar la lista de registros de la sesión
             viewModel.clearCurrentSessionList()
-
-            // Después de que la sincronización termine, redirigimos
             if (success) {
                 Toast.makeText(this@SegundoRegistroActivity, "Registro subido y finalizado.", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this@SegundoRegistroActivity, "No se pudo subir a la nube. Guardado localmente. Finalizando.", Toast.LENGTH_LONG).show()
             }
-
             val intent = Intent(this@SegundoRegistroActivity, HomeActivity::class.java)
             intent.putExtra("LOGGED_IN_USER", usuario)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
@@ -271,7 +300,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
         val inspectionDate = dateFormat.parse(fecha) ?: Date()
         val uniqueId = UUID.randomUUID().toString()
 
-        // *** CORRECCIÓN: Pasamos los valores Int directamente al constructor. ***
         return Inspection(
             usuario = usuario,
             fecha = inspectionDate,
@@ -303,6 +331,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         spinnerTipoDeFalla.setText("", false)
         layoutTipoDeFalla.visibility = View.GONE
         editMetrosDeTela.text.clear()
+        toggleButtonsBasedOnInput()
     }
 
     private fun validateForm(): Boolean {
