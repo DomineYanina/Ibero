@@ -11,12 +11,11 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.ibero.R
-import com.example.ibero.data.HistoricalInspection
 import com.example.ibero.data.Inspection
 import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.ui.InspectionHistoryAdapter
@@ -26,17 +25,16 @@ import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 import java.util.UUID
+import androidx.core.widget.addTextChangedListener
 
 class ContinuarCargaActivity : AppCompatActivity() {
 
     // Vistas de la interfaz de usuario
     private lateinit var editHojaDeRuta: EditText
     private lateinit var btnBuscar: MaterialButton
-    private lateinit var btnCancelar: MaterialButton // Nuevo: Botón de cancelar
+    private lateinit var btnCancelar: MaterialButton
     private lateinit var recyclerViewExistingRecords: RecyclerView
     private lateinit var formAndRecordsContainer: LinearLayout
     private lateinit var textExistingRecordsTitle: TextView
@@ -54,6 +52,9 @@ class ContinuarCargaActivity : AppCompatActivity() {
     private lateinit var historyAdapter: InspectionHistoryAdapter
     private val TAG = "ContinuarCargaLog"
 
+    // Nueva variable de estado para la lógica de los botones
+    private var hasRegisteredAnItem = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_continuar_carga)
@@ -68,12 +69,21 @@ class ContinuarCargaActivity : AppCompatActivity() {
         setupListeners()
         // Observa el estado de carga del ViewModel
         observeViewModel()
+
+        // Ocultar los botones de registro al inicio
+        btnIncorporar.isVisible = false
+        btnGuardarRegistro.isVisible = false
+        // Ocultar el formulario de registro al inicio
+        formAndRecordsContainer.visibility = View.GONE
+
+        // Monitorear los campos para mostrar los botones de registro
+        setupFieldWatchers()
     }
 
     private fun initViews() {
         editHojaDeRuta = findViewById(R.id.edit_hoja_ruta_continuar)
         btnBuscar = findViewById(R.id.btn_buscar_continuar)
-        btnCancelar = findViewById(R.id.btn_cancelar_continuar) // Nuevo: Inicializar el botón de cancelar
+        btnCancelar = findViewById(R.id.btn_cancelar_continuar)
         recyclerViewExistingRecords = findViewById(R.id.recycler_view_existing_records)
         formAndRecordsContainer = findViewById(R.id.form_and_records_container)
         textExistingRecordsTitle = findViewById(R.id.text_existing_records_title)
@@ -117,7 +127,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
             val hojaDeRutaInput = editHojaDeRuta.text.toString().trim()
             if (hojaDeRutaInput.isNotEmpty()) {
                 Log.d(TAG, "Botón 'Buscar' presionado. Hoja de Ruta: $hojaDeRutaInput")
-                // Llamamos a la nueva función de búsqueda y precarga
                 searchAndFetchRecords(hojaDeRutaInput)
             } else {
                 Toast.makeText(this, "Por favor, ingresa una Hoja de Ruta.", Toast.LENGTH_SHORT).show()
@@ -128,7 +137,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
             val loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
             val homeIntent = Intent(this, HomeActivity::class.java)
             homeIntent.putExtra("LOGGED_IN_USER", loggedInUser)
-
             startActivity(homeIntent)
             finish()
         }
@@ -158,6 +166,10 @@ class ContinuarCargaActivity : AppCompatActivity() {
         btnIncorporar.setOnClickListener {
             if (validateForm()) {
                 saveInspectionAndResetForm()
+                // Actualizamos el estado después de incorporar el primer registro
+                hasRegisteredAnItem = true
+                // Cambiamos el texto del botón Cancelar
+                btnCancelar.text = "Ir a Inicio"
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
             }
@@ -173,6 +185,41 @@ class ContinuarCargaActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupFieldWatchers() {
+        editMetrosDeTela.addTextChangedListener { toggleFormButtons() }
+        spinnerTipoCalidad.addTextChangedListener { toggleFormButtons() }
+        spinnerTipoFalla.addTextChangedListener { toggleFormButtons() }
+    }
+
+    /**
+     * Lógica para mostrar/ocultar los botones de registro según el estado de los campos.
+     */
+    private fun toggleFormButtons() {
+        // La lógica solo se aplica si se encontró una hoja de ruta y no se ha presionado "Incorporar"
+        if (formAndRecordsContainer.visibility == View.VISIBLE && !hasRegisteredAnItem) {
+            val hayInput = spinnerTipoCalidad.text.isNotBlank() ||
+                    spinnerTipoFalla.text.isNotBlank() ||
+                    editMetrosDeTela.text.isNotBlank()
+
+            if (hayInput) {
+                btnCancelar.isVisible = false
+                btnIncorporar.isVisible = true
+                btnGuardarRegistro.isVisible = true
+            } else {
+                btnCancelar.isVisible = true
+                btnIncorporar.isVisible = false
+                btnGuardarRegistro.isVisible = false
+            }
+        }
+        // Si ya se ha incorporado un registro, los botones de registro permanecen visibles
+        else if (hasRegisteredAnItem) {
+            btnCancelar.text = "Ir a Inicio"
+            btnCancelar.isVisible = true
+            btnIncorporar.isVisible = true
+            btnGuardarRegistro.isVisible = true
+        }
+    }
+
     /**
      * Habilita o deshabilita las vistas de la pantalla.
      * @param enabled El estado deseado para las vistas.
@@ -181,7 +228,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
         // Habilitar/deshabilitar vistas principales
         editHojaDeRuta.isEnabled = enabled
         btnBuscar.isEnabled = enabled
-        btnCancelar.isEnabled = enabled // Nuevo: Habilitar/deshabilitar botón de cancelar
+        btnCancelar.isEnabled = enabled
         btnIncorporar.isEnabled = enabled
         btnGuardarRegistro.isEnabled = enabled
         spinnerTipoCalidad.isEnabled = enabled
@@ -195,7 +242,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
 
     /**
      * Lógica de búsqueda y precarga de datos de la Hoja de Ruta.
-     * Reemplaza las funciones 'checkHojaRutaExistence' y 'findInspectionRecords' originales.
      */
     private fun searchAndFetchRecords(hojaDeRutaInput: String) {
         setViewsEnabled(false)
@@ -203,21 +249,15 @@ class ContinuarCargaActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // Se hace una sola llamada para obtener todos los registros
                 val response = GoogleSheetsApi2.service.findInspectionRecords(hojaDeRuta = hojaDeRutaInput)
 
                 withContext(Dispatchers.Main) {
-                    // Accedemos a la lista de registros directamente desde el objeto de respuesta
                     val records = response.data.records
                     if (response.status == "success" && records.isNotEmpty()) {
                         Log.d(TAG, "Registros encontrados: ${records.size}")
 
-                        // Usamos el primer registro para inicializar los datos de la sesión
                         val firstRecord = records.first()
 
-                        // Inicializamos el ViewModel con los datos de la sesión
-                        // ******* INICIO DE LA SECCIÓN CRÍTICA Y CORREGIDA *******
-                        // Convertimos los valores Double? a Int de forma segura
                         val telarInt = firstRecord.telar?.toInt() ?: 0
                         val tintoreriaInt = firstRecord.tintoreria?.toInt() ?: 0
                         val colorInt = firstRecord.color?.toInt() ?: 0
@@ -228,7 +268,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
                         viewModel.initSessionData(
                             usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido",
                             hojaDeRuta = firstRecord.hojaDeRuta,
-                            fecha = Date(), // La fecha del nuevo registro será la actual
+                            fecha = Date(),
                             tejeduria = firstRecord.tejeduria ?: "",
                             telar = telarInt.toString(),
                             tintoreria = tintoreriaInt.toString(),
@@ -243,15 +283,15 @@ class ContinuarCargaActivity : AppCompatActivity() {
                             impermeable = firstRecord.impermeable ?: "",
                             otro = firstRecord.otro ?: ""
                         )
-                        // ******* FIN DE LA SECCIÓN CRÍTICA Y CORREGIDA *******
 
-                        // Actualizamos la UI con los datos obtenidos
                         textExistingRecordsTitle.text = "Registros para la Hoja de Ruta: ${firstRecord.hojaDeRuta} - Artículo: ${firstRecord.articulo}"
                         formAndRecordsContainer.visibility = View.VISIBLE
                         historyAdapter.updateList(records)
                         Toast.makeText(this@ContinuarCargaActivity, "Hoja de Ruta encontrada. Historial cargado.", Toast.LENGTH_LONG).show()
+
+                        // Llamar a la lógica de visibilidad inicial después de una búsqueda exitosa
+                        toggleFormButtons()
                     } else {
-                        // Si la respuesta es de éxito pero no hay datos, significa que no existe
                         Toast.makeText(this@ContinuarCargaActivity, "No se encontraron registros para la Hoja de Ruta. Por favor, revisa el número.", Toast.LENGTH_LONG).show()
                         formAndRecordsContainer.visibility = View.GONE
                     }
@@ -268,7 +308,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
             }
         }
     }
-
 
     private fun validateForm(): Boolean {
         var isValid = true
@@ -305,22 +344,19 @@ class ContinuarCargaActivity : AppCompatActivity() {
      * Crea un objeto Inspection a partir de los datos del formulario y los datos de sesión del ViewModel.
      */
     private fun createInspectionObject(): Inspection {
-        // Obtenemos los datos base que ya están cargados en el ViewModel
         val sessionData = viewModel.getCurrentSessionData()
 
         val tipoCalidad = spinnerTipoCalidad.text.toString()
         val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoFalla.text.toString() else null
         val metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
 
-        // Creamos un nuevo objeto de inspección copiando los datos de sesión y agregando los nuevos campos
         return sessionData.copy(
-            // Asignamos un nuevo ID único para este registro específico
-            id = 0, // El ID de la base de datos local se generará automáticamente
+            id = 0,
             uniqueId = UUID.randomUUID().toString(),
             tipoCalidad = tipoCalidad,
             tipoDeFalla = tipoDeFalla,
             metrosDeTela = metrosDeTela,
-            isSynced = false, // Siempre es false al crear un nuevo registro
+            isSynced = false,
             imagePaths = emptyList(),
             imageUrls = emptyList()
         )
@@ -335,6 +371,8 @@ class ContinuarCargaActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.insertInspection(inspection)
             resetNewRecordForm()
+            // Llamar a la lógica de visibilidad después de resetear el formulario
+            toggleFormButtons()
         }
     }
 
@@ -345,23 +383,18 @@ class ContinuarCargaActivity : AppCompatActivity() {
     private fun saveInspectionAndFinalize() {
         val inspection = createInspectionObject()
         lifecycleScope.launch {
-            // Llama a la función suspendida para insertar y sincronizar de forma síncrona
             val success = viewModel.finalizeAndSync(inspection)
 
-            // Limpiar la lista de registros de la sesión
             viewModel.clearCurrentSessionList()
 
-            // Después de que la sincronización termine, redirigimos
             if (success) {
                 Toast.makeText(this@ContinuarCargaActivity, "Registro subido y finalizado.", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this@ContinuarCargaActivity, "No se pudo subir a la nube. Guardado localmente. Finalizando.", Toast.LENGTH_LONG).show()
             }
 
-            // Obtenemos el usuario de los datos de la sesión para pasarlo al HomeActivity
             val userFromSession = viewModel.getCurrentSessionData().usuario
             val intent = Intent(this@ContinuarCargaActivity, HomeActivity::class.java)
-            // Pasar el usuario para mantener la sesión
             intent.putExtra("LOGGED_IN_USER", userFromSession)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
             startActivity(intent)
@@ -376,9 +409,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
         editMetrosDeTela.setText("")
     }
 
-    /**
-     * Método no utilizado en el flujo actual, pero se mantiene por si es necesario.
-     */
     private fun clearAllFormsAndState() {
         editHojaDeRuta.setText("")
         formAndRecordsContainer.visibility = View.GONE
