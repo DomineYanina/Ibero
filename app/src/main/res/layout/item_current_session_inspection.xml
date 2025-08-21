@@ -2,41 +2,65 @@
 <androidx.cardview.widget.CardView
         xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
         app:cardCornerRadius="8dp"
         app:cardElevation="4dp">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
             android:padding="16dp">
 
         <TextView
-                android:id="@+id/text_view_item_calidad"
+                android:id="@+id/text_view_item_order_number"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Calidad: Primera"
-                android:textAppearance="?attr/textAppearanceListItemSecondary"/>
+                android:layout_marginEnd="8dp"
+                android:layout_marginTop="8dp"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:textColor="#A2A1A1"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                tools:text="1" />
 
-        <TextView
-                android:id="@+id/text_view_item_falla"
-                android:layout_width="wrap_content"
+        <LinearLayout
+                android:id="@+id/content_container"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Falla: Falla de trama"
-                android:textAppearance="?attr/textAppearanceListItemSecondary"
-                android:visibility="gone" />
+                android:orientation="vertical"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/text_view_item_order_number"
+                app:layout_constraintBottom_toBottomOf="parent">
 
-        <TextView
-                android:id="@+id/text_view_item_metros"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Metros: 50.0"
-                android:textAppearance="?attr/textAppearanceListItemSecondary"/>
-    </LinearLayout>
+            <TextView
+                    android:id="@+id/text_view_item_calidad"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Calidad: Primera"
+                    android:textAppearance="?attr/textAppearanceListItemSecondary"/>
+
+            <TextView
+                    android:id="@+id/text_view_item_falla"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Falla: Falla de trama"
+                    android:textAppearance="?attr/textAppearanceListItemSecondary"
+                    android:visibility="gone" />
+
+            <TextView
+                    android:id="@+id/text_view_item_metros"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Metros: 50.0"
+                    android:textAppearance="?attr/textAppearanceListItemSecondary"/>
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>

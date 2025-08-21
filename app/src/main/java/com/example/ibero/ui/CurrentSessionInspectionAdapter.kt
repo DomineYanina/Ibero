@@ -14,8 +14,9 @@ class CurrentSessionInspectionAdapter(
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val calidadTextView: TextView = view.findViewById(R.id.text_view_item_calidad)
-        val fallaTextView: TextView = view.findViewById(R.id.text_view_item_falla) // Nueva referencia
+        val fallaTextView: TextView = view.findViewById(R.id.text_view_item_falla)
         val metrosTextView: TextView = view.findViewById(R.id.text_view_item_metros)
+        val orderNumberTextView: TextView = view.findViewById(R.id.text_view_item_order_number) // NUEVO: Referencia al número de orden
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -26,6 +27,9 @@ class CurrentSessionInspectionAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val inspection = inspections[position]
+
+        // Asignamos el número de orden (posición + 1) al nuevo TextView
+        holder.orderNumberTextView.text = (position + 1).toString() // NUEVO: Lógica para numerar los ítems
 
         holder.calidadTextView.text = "Calidad: ${inspection.tipoCalidad}"
         holder.metrosTextView.text = "Metros: ${inspection.metrosDeTela}"
