@@ -7,7 +7,7 @@
         android:background="#F5F5F5"
         tools:context=".PrimerRegistroActivity">
 
-    <!-- ScrollView para el contenido principal, restringido para dejar espacio al botón de "Cancelar" -->
+    <!-- ScrollView para el contenido principal -->
     <ScrollView
             android:layout_width="0dp"
             android:layout_height="0dp"
@@ -43,218 +43,282 @@
                     android:textSize="18sp"
                     android:textStyle="italic" />
 
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_fecha"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            <!-- Par de campos: Fecha y Hoja de Ruta -->
+            <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Fecha">
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
 
-                <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_fecha"
-                        android:layout_width="match_parent"
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_fecha"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:clickable="true"
-                        android:focusable="false"
-                        android:inputType="date" />
-            </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:hint="Fecha">
 
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_hoja_de_ruta"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edit_fecha"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:clickable="true"
+                            android:focusable="false"
+                            android:inputType="date" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_hoja_de_ruta"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Hoja de Ruta">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edit_hoja_de_ruta"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <!-- Par de campos: Tejeduria y Telar -->
+            <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Hoja de Ruta">
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
 
-                <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_hoja_de_ruta"
-                        android:layout_width="match_parent"
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_tejeduria"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:inputType="number" />
-            </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:hint="Tejeduria">
 
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_tejeduria"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    <AutoCompleteTextView
+                            android:id="@+id/spinner_tejeduria"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_telar"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Telar">
+
+                    <AutoCompleteTextView
+                            android:id="@+id/spinner_telar"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <!-- Par de campos: Tintoreria y Artículo -->
+            <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Tejeduria">
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
 
-                <AutoCompleteTextView
-                        android:id="@+id/spinner_tejeduria"
-                        android:layout_width="match_parent"
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_tintoreria"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:hint="Tintoreria">
 
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_telar"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edit_tintoreria"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_articulo"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Artículo">
+
+                    <AutoCompleteTextView
+                            android:id="@+id/spinner_articulo"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <!-- Par de campos: Color y Rollo de Urdido -->
+            <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Telar">
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
 
-                <AutoCompleteTextView
-                        android:id="@+id/spinner_telar"
-                        android:layout_width="match_parent"
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_color"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:hint="Color">
 
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_tintoreria"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edit_color"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_rollo_de_urdido"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Rollo de Urdido">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edit_rollo_de_urdido"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <!-- Par de campos: Orden y Cadena -->
+            <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Tintoreria">
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
 
-                <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_tintoreria"
-                        android:layout_width="match_parent"
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_orden"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:inputType="number" />
-            </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:hint="Orden">
 
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_articulo"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edit_orden"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="text" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_cadena"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Cadena">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edit_cadena"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <!-- Par de campos: Ancho de Rollo y Esmerilado -->
+            <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Artículo">
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
 
-                <AutoCompleteTextView
-                        android:id="@+id/spinner_articulo"
-                        android:layout_width="match_parent"
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_ancho_de_rollo"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:hint="Ancho de Rollo">
 
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_color"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edit_ancho_de_rollo"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_esmerilado"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Esmerilado (Opcional)">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edit_esmerilado"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textCapSentences" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <!-- Par de campos: Ignífugo y Impermeable -->
+            <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Color">
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
 
-                <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_color"
-                        android:layout_width="match_parent"
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_ignifugo"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:inputType="number" />
-            </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:hint="Ignífugo (Opcional)">
 
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_rollo_de_urdido"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Rollo de Urdido">
+                    <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edit_ignifugo"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textCapSentences" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_rollo_de_urdido"
-                        android:layout_width="match_parent"
+                <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/layout_impermeable"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:inputType="number" />
-            </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_weight="1"
+                        android:hint="Impermeable (Opcional)">
 
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_orden"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Orden">
+                    <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/edit_impermeable"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textCapSentences" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
 
-                <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_orden"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="text" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_cadena"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Cadena">
-
-                <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_cadena"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="number" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_ancho_de_rollo"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Ancho de Rollo">
-
-                <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_ancho_de_rollo"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="number" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_esmerilado"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Esmerilado (Opcional)">
-
-                <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_esmerilado"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="textCapSentences" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_ignifugo"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Ignífugo (Opcional)">
-
-                <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_ignifugo"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="textCapSentences" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layout_impermeable"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:hint="Impermeable (Opcional)">
-
-                <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/edit_impermeable"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="textCapSentences" />
-            </com.google.android.material.textfield.TextInputLayout>
-
+            <!-- Campo individual: Otro (Opcional) -->
             <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/layout_otro"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -270,6 +334,7 @@
                         android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Botón Siguiente -->
             <Button
                     android:id="@+id/btn_next"
                     style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
