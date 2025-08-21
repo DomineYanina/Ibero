@@ -41,6 +41,9 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var loadingOverlay: View
 
+    // 1) Nueva variable de estado para controlar la visibilidad del botón Volver
+    private var hasRegisteredAnItem = false
+
     // Datos recibidos
     private lateinit var usuario: String
     private lateinit var fecha: String
@@ -95,8 +98,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
         // 🔹 1) Al iniciar, Continuar y Finalizar deshabilitados
         btnIncorporar.isVisible = false
         btnGuardarRegistro.isVisible = false
-        //btnIncorporar.isEnabled = false
-        //btnGuardarRegistro.isEnabled = false
 
         // 🔹 2) Monitoreo de campos
         setupFieldWatchers()
@@ -108,32 +109,17 @@ class SegundoRegistroActivity : AppCompatActivity() {
             if (isLoading) {
                 progressBar.visibility = View.VISIBLE
                 loadingOverlay.visibility = View.VISIBLE
-
-
                 btnIncorporar.isVisible = false
                 btnGuardarRegistro.isVisible = false
                 spinnerTipoCalidad.isVisible = false
                 spinnerTipoDeFalla.isVisible = false
                 editMetrosDeTela.isVisible = false
-
-
-                /*btnIncorporar.isEnabled = false
-                btnGuardarRegistro.isEnabled = false
-                spinnerTipoCalidad.isEnabled = false
-                spinnerTipoDeFalla.isEnabled = false
-                editMetrosDeTela.isEnabled = false*/
             } else {
                 progressBar.visibility = View.GONE
                 loadingOverlay.visibility = View.GONE
-
-
                 spinnerTipoCalidad.isVisible = true
                 spinnerTipoDeFalla.isVisible = true
                 editMetrosDeTela.isVisible = true
-
-                /*spinnerTipoCalidad.isEnabled = true
-                spinnerTipoDeFalla.isEnabled = true
-                editMetrosDeTela.isEnabled = true*/
                 toggleButtonsBasedOnInput()
             }
         }
@@ -195,8 +181,9 @@ class SegundoRegistroActivity : AppCompatActivity() {
             if (validateForm()) {
                 saveInspectionAndResetForm()
 
+                // 2) Actualiza el estado cuando se incorpora un registro
+                hasRegisteredAnItem = true
                 btnVolver.isVisible = false
-                //btnVolver.isEnabled = false
                 btnCancelar.text = "Ir a Inicio"
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
@@ -240,28 +227,28 @@ class SegundoRegistroActivity : AppCompatActivity() {
     }
 
     private fun toggleButtonsBasedOnInput() {
-        val hayInput = spinnerTipoCalidad.text.isNotBlank() ||
-                spinnerTipoDeFalla.text.isNotBlank() ||
-                editMetrosDeTela.text.isNotBlank()
-
-        if (hayInput) {
-            btnCancelar.isVisible = false
+        // 3) Ajusta la lógica de visibilidad para que dependa del nuevo estado
+        if (hasRegisteredAnItem) {
             btnVolver.isVisible = false
+            btnCancelar.isVisible = true // Mantener visible el botón Cancelar/Ir a Inicio
             btnIncorporar.isVisible = true
             btnGuardarRegistro.isVisible = true
-            //btnCancelar.isEnabled = false
-            //btnVolver.isEnabled = false
-            //btnIncorporar.isEnabled = true
-            //btnGuardarRegistro.isEnabled = true
         } else {
-            btnCancelar.isVisible = true
-            btnVolver.isVisible = true
-            btnIncorporar.isVisible = false
-            btnGuardarRegistro.isVisible = false
-            //btnCancelar.isEnabled = true
-            //btnVolver.isEnabled = true
-            //btnIncorporar.isEnabled = false
-            //btnGuardarRegistro.isEnabled = false
+            val hayInput = spinnerTipoCalidad.text.isNotBlank() ||
+                    spinnerTipoDeFalla.text.isNotBlank() ||
+                    editMetrosDeTela.text.isNotBlank()
+
+            if (hayInput) {
+                btnCancelar.isVisible = false
+                btnVolver.isVisible = false
+                btnIncorporar.isVisible = true
+                btnGuardarRegistro.isVisible = true
+            } else {
+                btnCancelar.isVisible = true
+                btnVolver.isVisible = true
+                btnIncorporar.isVisible = false
+                btnGuardarRegistro.isVisible = false
+            }
         }
     }
 
