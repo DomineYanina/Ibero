@@ -20,6 +20,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import androidx.core.widget.addTextChangedListener
+import android.widget.LinearLayout // Importa la clase LinearLayout
 
 class SegundoRegistroActivity : AppCompatActivity() {
 
@@ -33,6 +34,14 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var btnIncorporar: Button
     private lateinit var btnCancelar: Button
     private lateinit var btnVolver: Button
+
+    // Nuevas variables para los botones de limpieza
+    private lateinit var btnLimpiarCalidad: Button
+    private lateinit var btnLimpiarFalla: Button
+    private lateinit var btnLimpiarMetros: Button
+
+    // Nueva variable para el contenedor de tipo de falla
+    private lateinit var containerTipoDeFalla: LinearLayout
 
     private lateinit var recyclerViewCurrentSessionRecords: RecyclerView
     private lateinit var currentSessionInspectionAdapter: CurrentSessionInspectionAdapter
@@ -149,6 +158,14 @@ class SegundoRegistroActivity : AppCompatActivity() {
         textSessionTitle = findViewById(R.id.text_session_title)
         btnCancelar = findViewById(R.id.btn_cancelar_segundo_registro)
         btnVolver = findViewById(R.id.btn_volver)
+
+        // Inicializar los nuevos botones
+        btnLimpiarCalidad = findViewById(R.id.btn_limpiar_calidad)
+        btnLimpiarFalla = findViewById(R.id.btn_limpiar_falla)
+        btnLimpiarMetros = findViewById(R.id.btn_limpiar_metros)
+
+        // Inicializar el contenedor de tipo de falla
+        containerTipoDeFalla = findViewById(R.id.container_tipo_falla)
     }
 
     private fun setupSpinners() {
@@ -168,9 +185,9 @@ class SegundoRegistroActivity : AppCompatActivity() {
         spinnerTipoCalidad.setOnItemClickListener { _, _, _, _ ->
             val selectedQuality = spinnerTipoCalidad.text.toString()
             if (selectedQuality == "Segunda") {
-                layoutTipoDeFalla.visibility = View.VISIBLE
+                containerTipoDeFalla.visibility = View.VISIBLE
             } else {
-                layoutTipoDeFalla.visibility = View.GONE
+                containerTipoDeFalla.visibility = View.GONE
                 spinnerTipoDeFalla.setText("", false)
             }
         }
@@ -211,6 +228,19 @@ class SegundoRegistroActivity : AppCompatActivity() {
             backIntent.putExtras(intent.extras ?: Bundle())
             startActivity(backIntent)
             finish()
+        }
+
+        // Listeners para los nuevos botones de limpieza
+        btnLimpiarCalidad.setOnClickListener {
+            resetForm(fieldToReset = "calidad")
+        }
+
+        btnLimpiarFalla.setOnClickListener {
+            resetForm(fieldToReset = "falla")
+        }
+
+        btnLimpiarMetros.setOnClickListener {
+            resetForm(fieldToReset = "metros")
         }
     }
 
@@ -313,11 +343,27 @@ class SegundoRegistroActivity : AppCompatActivity() {
         )
     }
 
-    private fun resetForm() {
-        spinnerTipoCalidad.setText("", false)
-        spinnerTipoDeFalla.setText("", false)
-        layoutTipoDeFalla.visibility = View.GONE
-        editMetrosDeTela.text.clear()
+    private fun resetForm(fieldToReset: String? = null) {
+        when (fieldToReset) {
+            "calidad" -> {
+                spinnerTipoCalidad.setText("", false)
+                containerTipoDeFalla.visibility = View.GONE
+                spinnerTipoDeFalla.setText("", false)
+            }
+            "falla" -> {
+                spinnerTipoDeFalla.setText("", false)
+            }
+            "metros" -> {
+                editMetrosDeTela.text.clear()
+            }
+            else -> {
+                // Limpia todos los campos si no se especifica
+                spinnerTipoCalidad.setText("", false)
+                containerTipoDeFalla.visibility = View.GONE
+                spinnerTipoDeFalla.setText("", false)
+                editMetrosDeTela.text.clear()
+            }
+        }
         toggleButtonsBasedOnInput()
     }
 
