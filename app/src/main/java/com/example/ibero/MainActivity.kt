@@ -42,7 +42,7 @@ import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.Inspection
 import com.example.ibero.repository.InspectionRepository
 import com.example.ibero.ui.InspectionHistoryAdapter
-import com.example.ibero.ui.InspectionViewModel
+import com.example.ibero.InspectionViewModel
 import com.example.ibero.data.HistoricalInspection
 import kotlinx.coroutines.launch
 import java.io.File

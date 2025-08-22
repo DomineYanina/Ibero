@@ -9,14 +9,16 @@ import com.example.ibero.R
 import com.example.ibero.data.Inspection
 
 class CurrentSessionInspectionAdapter(
-    private val inspections: MutableList<Inspection>
+    private val inspections: MutableList<Inspection>,
+    // Nuevo: Click listener para los items de la lista
+    private val clickListener: (Inspection) -> Unit
 ) : RecyclerView.Adapter<CurrentSessionInspectionAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val calidadTextView: TextView = view.findViewById(R.id.text_view_item_calidad)
         val fallaTextView: TextView = view.findViewById(R.id.text_view_item_falla)
         val metrosTextView: TextView = view.findViewById(R.id.text_view_item_metros)
-        val orderNumberTextView: TextView = view.findViewById(R.id.text_view_item_order_number) // NUEVO: Referencia al número de orden
+        val orderNumberTextView: TextView = view.findViewById(R.id.text_view_item_order_number)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -28,18 +30,21 @@ class CurrentSessionInspectionAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val inspection = inspections[position]
 
-        // Asignamos el número de orden (posición + 1) al nuevo TextView
-        holder.orderNumberTextView.text = (position + 1).toString() // NUEVO: Lógica para numerar los ítems
+        holder.orderNumberTextView.text = (position + 1).toString()
 
         holder.calidadTextView.text = "Calidad: ${inspection.tipoCalidad}"
         holder.metrosTextView.text = "Metros: ${inspection.metrosDeTela}"
 
-        // Lógica para mostrar u ocultar el tipo de falla
         if (inspection.tipoCalidad == "Segunda" && inspection.tipoDeFalla != null) {
             holder.fallaTextView.visibility = View.VISIBLE
             holder.fallaTextView.text = "Falla: ${inspection.tipoDeFalla}"
         } else {
             holder.fallaTextView.visibility = View.GONE
+        }
+
+        // NUEVO: Asignar el click listener al itemView
+        holder.itemView.setOnClickListener {
+            clickListener(inspection)
         }
     }
 

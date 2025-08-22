@@ -10,7 +10,7 @@ import android.widget.LinearLayout // Importa LinearLayout para el contenedor de
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.ibero.data.network.GoogleSheetsApi
+import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.ui.TonalidadesAdapter
 import com.example.ibero.data.TonalidadItem
 import com.google.android.material.textfield.TextInputEditText // Importa el tipo correcto
@@ -98,7 +98,7 @@ class TonalidadesActivity : AppCompatActivity() {
     private fun buscarRegistrosPorHojaRuta(hojaRuta: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val response = GoogleSheetsApi.service.findTonalidades(hojaDeRuta = hojaRuta)
+                val response = GoogleSheetsApi2.service.findTonalidades(hojaDeRuta = hojaRuta)
 
                 withContext(Dispatchers.Main) {
                     if (response.status == "success" && !response.data.isNullOrEmpty()) {
@@ -159,7 +159,7 @@ class TonalidadesActivity : AppCompatActivity() {
 
                 val gson = Gson()
                 val updatesJson = gson.toJson(updates)
-                val response = GoogleSheetsApi.service.updateTonalidades(updates = updatesJson)
+                val response = GoogleSheetsApi2.service.updateTonalidades(updates = updatesJson)
 
                 withContext(Dispatchers.Main) {
                     if (response.status == "success") {

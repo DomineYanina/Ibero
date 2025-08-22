@@ -2,6 +2,7 @@ package com.example.ibero
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.*
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -12,7 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ibero.data.Inspection
 import com.example.ibero.ui.CurrentSessionInspectionAdapter
-import com.example.ibero.ui.InspectionViewModel
+import com.example.ibero.InspectionViewModel
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -20,7 +21,8 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import androidx.core.widget.addTextChangedListener
-import android.widget.LinearLayout // Importa la clase LinearLayout
+import android.widget.LinearLayout
+import androidx.appcompat.app.AlertDialog
 
 class SegundoRegistroActivity : AppCompatActivity() {
 
@@ -35,12 +37,10 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var btnCancelar: Button
     private lateinit var btnVolver: Button
 
-    // Nuevas variables para los botones de limpieza
     private lateinit var btnLimpiarCalidad: Button
     private lateinit var btnLimpiarFalla: Button
     private lateinit var btnLimpiarMetros: Button
 
-    // Nueva variable para el contenedor de tipo de falla
     private lateinit var containerTipoDeFalla: LinearLayout
 
     private lateinit var recyclerViewCurrentSessionRecords: RecyclerView
@@ -50,8 +50,8 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var loadingOverlay: View
 
-    // 1) Nueva variable de estado para controlar la visibilidad del botón Volver
     private var hasRegisteredAnItem = false
+    private var editingInspection: Inspection? = null // NUEVA VARIABLE DE ESTADO
 
     // Datos recibidos
     private lateinit var usuario: String
@@ -78,7 +78,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
         val factory = InspectionViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
-        // Datos de la Activity anterior
         usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
         fecha = intent.getStringExtra("FECHA") ?: ""
         hojaDeRuta = intent.getStringExtra("HOJA_DE_RUTA") ?: ""
@@ -104,16 +103,14 @@ class SegundoRegistroActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.progress_bar)
         loadingOverlay = findViewById(R.id.loading_overlay)
 
-        // 🔹 1) Al iniciar, Continuar y Finalizar deshabilitados
         btnIncorporar.isVisible = false
         btnGuardarRegistro.isVisible = false
+        btnVolver.isVisible = true // A diferencia de la otra actividad, aquí el botón Volver siempre es visible hasta que se incorpore un ítem.
 
-        // 🔹 2) Monitoreo de campos
         setupFieldWatchers()
 
         textSessionTitle.text = "Registros ingresados para el artículo: $articulo"
 
-        // Observa el estado de carga del ViewModel
         viewModel.isLoading.observe(this) { isLoading ->
             if (isLoading) {
                 progressBar.visibility = View.VISIBLE
@@ -133,7 +130,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
             }
         }
 
-        // Observa los mensajes de sincronización
         viewModel.syncMessage.observe(this) { message ->
             message?.let {
                 Toast.makeText(this, it, Toast.LENGTH_LONG).show()
@@ -141,9 +137,13 @@ class SegundoRegistroActivity : AppCompatActivity() {
             }
         }
 
-        // Observa la lista de registros
         viewModel.currentSessionInspections.observe(this) { inspections ->
             currentSessionInspectionAdapter.updateList(inspections)
+            if (inspections.isNotEmpty()) {
+                hasRegisteredAnItem = true
+                btnVolver.isVisible = false
+                btnCancelar.text = "Ir a Inicio"
+            }
         }
     }
 
@@ -159,12 +159,10 @@ class SegundoRegistroActivity : AppCompatActivity() {
         btnCancelar = findViewById(R.id.btn_cancelar_segundo_registro)
         btnVolver = findViewById(R.id.btn_volver)
 
-        // Inicializar los nuevos botones
         btnLimpiarCalidad = findViewById(R.id.btn_limpiar_calidad)
         btnLimpiarFalla = findViewById(R.id.btn_limpiar_falla)
         btnLimpiarMetros = findViewById(R.id.btn_limpiar_metros)
 
-        // Inicializar el contenedor de tipo de falla
         containerTipoDeFalla = findViewById(R.id.container_tipo_falla)
     }
 
@@ -196,12 +194,11 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private fun setupListeners() {
         btnIncorporar.setOnClickListener {
             if (validateForm()) {
-                saveInspectionAndResetForm()
-
-                // 2) Actualiza el estado cuando se incorpora un registro
-                hasRegisteredAnItem = true
-                btnVolver.isVisible = false
-                btnCancelar.text = "Ir a Inicio"
+                if (editingInspection != null) {
+                    updateInspectionAndSync()
+                } else {
+                    saveInspectionAndResetForm()
+                }
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
             }
@@ -209,7 +206,11 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
         btnGuardarRegistro.setOnClickListener {
             if (validateForm()) {
-                saveInspectionAndFinalize()
+                if (editingInspection != null) {
+                    updateInspectionAndFinalize()
+                } else {
+                    saveInspectionAndFinalize()
+                }
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
             }
@@ -230,7 +231,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
             finish()
         }
 
-        // Listeners para los nuevos botones de limpieza
         btnLimpiarCalidad.setOnClickListener {
             resetForm(fieldToReset = "calidad")
         }
@@ -245,9 +245,47 @@ class SegundoRegistroActivity : AppCompatActivity() {
     }
 
     private fun setupCurrentSessionRecyclerView() {
-        currentSessionInspectionAdapter = CurrentSessionInspectionAdapter(mutableListOf())
+        currentSessionInspectionAdapter = CurrentSessionInspectionAdapter(mutableListOf()) { inspection ->
+            // Manejar clic en el item de la lista
+            showEditConfirmationDialog(inspection)
+        }
         recyclerViewCurrentSessionRecords.layoutManager = LinearLayoutManager(this)
         recyclerViewCurrentSessionRecords.adapter = currentSessionInspectionAdapter
+    }
+
+    // NUEVO MÉTODO: Muestra un diálogo para confirmar la edición
+    private fun showEditConfirmationDialog(inspection: Inspection) {
+        AlertDialog.Builder(this)
+            .setTitle("Modificar Registro")
+            .setMessage("¿Deseas modificar el registro de ${inspection.tipoCalidad} con ${inspection.metrosDeTela} metros?")
+            .setPositiveButton("Sí") { dialog, _ ->
+                preloadFormForEditing(inspection)
+                dialog.dismiss()
+            }
+            .setNegativeButton("No") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    // NUEVO MÉTODO: Precarga el formulario con los datos para la edición
+    private fun preloadFormForEditing(inspection: Inspection) {
+        editingInspection = inspection // Guarda el registro que se está editando
+
+        spinnerTipoCalidad.setText(inspection.tipoCalidad, false)
+
+        if (inspection.tipoCalidad == "Segunda") {
+            containerTipoDeFalla.visibility = View.VISIBLE
+            spinnerTipoDeFalla.setText(inspection.tipoDeFalla, false)
+        } else {
+            containerTipoDeFalla.visibility = View.GONE
+            spinnerTipoDeFalla.setText("", false)
+        }
+
+        editMetrosDeTela.setText(inspection.metrosDeTela.toString())
+
+        btnIncorporar.text = "Actualizar"
+        Toast.makeText(this, "Modifica los campos y toca Actualizar", Toast.LENGTH_SHORT).show()
     }
 
     private fun setupFieldWatchers() {
@@ -257,10 +295,9 @@ class SegundoRegistroActivity : AppCompatActivity() {
     }
 
     private fun toggleButtonsBasedOnInput() {
-        // 3) Ajusta la lógica de visibilidad para que dependa del nuevo estado
         if (hasRegisteredAnItem) {
             btnVolver.isVisible = false
-            btnCancelar.isVisible = true // Mantener visible el botón Cancelar/Ir a Inicio
+            btnCancelar.isVisible = true
             btnIncorporar.isVisible = true
             btnGuardarRegistro.isVisible = true
         } else {
@@ -287,6 +324,65 @@ class SegundoRegistroActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.insertInspection(inspection)
             resetForm()
+        }
+    }
+
+    private fun updateInspectionAndSync() {
+        val inspectionToUpdate = editingInspection?.copy(
+            tipoCalidad = spinnerTipoCalidad.text.toString(),
+            tipoDeFalla = if (spinnerTipoCalidad.text.toString() == "Segunda") spinnerTipoDeFalla.text.toString() else null,
+            metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
+        )
+
+        if (inspectionToUpdate != null) {
+            // Agregamos un log para confirmar que la función se ejecuta
+            Log.d("UpdateDebug", "Iniciando updateInspectionAndSync desde la Activity")
+
+            try {
+                lifecycleScope.launch {
+                    // Llama al nuevo método del ViewModel
+                    viewModel.updateInspectionAndSync(inspectionToUpdate)
+                    resetForm()
+                    editingInspection = null // Resetea el estado de edición
+                    btnIncorporar.text = "Continuar" // Restaura el texto del botón
+                    // Agregamos un log para confirmar que la operación finalizó
+                    Log.d("UpdateDebug", "Operación de actualización finalizada.")
+                }
+            } catch (e: Exception) {
+                // Este log captura cualquier error que ocurra al iniciar la corrutina
+                Log.e("UpdateError", "Error al lanzar la corrutina de actualización: ${e.message}", e)
+            }
+        } else {
+            Log.e("UpdateError", "No se pudo crear el objeto Inspection para actualizar. Objeto nulo.")
+        }
+    }
+
+    // NUEVO MÉTODO: Actualiza el registro y finaliza la sesión
+    private fun updateInspectionAndFinalize() {
+        val inspectionToUpdate = editingInspection?.copy(
+            tipoCalidad = spinnerTipoCalidad.text.toString(),
+            tipoDeFalla = if (spinnerTipoCalidad.text.toString() == "Segunda") spinnerTipoDeFalla.text.toString() else null,
+            metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
+        )
+
+        if (inspectionToUpdate != null) {
+            lifecycleScope.launch {
+                val success = viewModel.updateInspectionAndFinalize(inspectionToUpdate)
+
+                viewModel.clearCurrentSessionList()
+
+                if (success) {
+                    Toast.makeText(this@SegundoRegistroActivity, "Registro actualizado y finalizado.", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@SegundoRegistroActivity, "No se pudo subir a la nube. Guardado localmente. Finalizando.", Toast.LENGTH_LONG).show()
+                }
+
+                val intent = Intent(this@SegundoRegistroActivity, HomeActivity::class.java)
+                intent.putExtra("LOGGED_IN_USER", usuario)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(intent)
+                finish()
+            }
         }
     }
 
@@ -357,13 +453,17 @@ class SegundoRegistroActivity : AppCompatActivity() {
                 editMetrosDeTela.text.clear()
             }
             else -> {
-                // Limpia todos los campos si no se especifica
                 spinnerTipoCalidad.setText("", false)
                 containerTipoDeFalla.visibility = View.GONE
                 spinnerTipoDeFalla.setText("", false)
                 editMetrosDeTela.text.clear()
             }
         }
+
+        // Al resetear, también restauramos el estado de edición
+        editingInspection = null
+        btnIncorporar.text = "Continuar"
+
         toggleButtonsBasedOnInput()
     }
 

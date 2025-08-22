@@ -12,7 +12,6 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 import java.util.concurrent.TimeUnit
 
-// Modelos de datos para la nueva respuesta de addInspection
 data class AddInspectionResponse(
     @SerializedName("status")
     val status: String,
@@ -28,45 +27,41 @@ data class AddInspectionData(
 )
 
 data class TonalidadesData(
-    // El campo que antes se llamaba valorColumnaT ahora es más claro como valorColumnaA
     @SerializedName("valorColumnaA") val valorColumnaA: String?,
-    // ¡NUEVO CAMPO!
     @SerializedName("valorColumnaV") val valorColumnaV: String?,
     @SerializedName("rowNumber") val rowNumber: Int
 )
 
-// Modelo de la respuesta completa del servidor
 data class TonalidadesResponse(
     @SerializedName("status") val status: String,
     @SerializedName("message") val message: String?,
     @SerializedName("data") val data: List<TonalidadesData>?
 )
-// Modelo de datos para los ítems de la respuesta de búsqueda
+
 data class TonalidadResponseItem(
     val valorColumnaT: String,
-    val rowNumber: Int // El número de fila es clave para la actualización
+    val rowNumber: Int
 )
 
-// NUEVOS modelos de datos para los registros de inspección del historial
 data class InspectionRecord(
-    @SerializedName("valorColumnaC") val valorColumnaC: String, // Fecha
-    @SerializedName("valorColumnaD") val valorColumnaD: String, // Hoja de Ruta
-    @SerializedName("valorColumnaE") val valorColumnaE: String, // Tejeduria
-    @SerializedName("valorColumnaF") val valorColumnaF: Int,    // Telar
-    @SerializedName("valorColumnaG") val valorColumnaG: Int,    // Tintoreria
-    @SerializedName("valorColumnaH") val valorColumnaH: String, // Articulo
-    @SerializedName("valorColumnaI") val valorColumnaI: Int,    // Color
-    @SerializedName("valorColumnaJ") val valorColumnaJ: Int,    // Rollo de Urdido
-    @SerializedName("valorColumnaK") val valorColumnaK: String, // Orden
-    @SerializedName("valorColumnaL") val valorColumnaL: Int,    // Cadena
-    @SerializedName("valorColumnaM") val valorColumnaM: Int,    // Ancho de Rollo
-    @SerializedName("valorColumnaN") val valorColumnaN: String, // Esmerilado
-    @SerializedName("valorColumnaO") val valorColumnaO: String, // Ignifugo
-    @SerializedName("valorColumnaP") val valorColumnaP: String, // Impermeable
-    @SerializedName("valorColumnaQ") val valorColumnaQ: String, // Otro
-    @SerializedName("valorColumnaS") val valorColumnaS: String, // Tipo de Calidad
-    @SerializedName("valorColumnaT") val valorColumnaT: String?, // Tipo de Falla
-    @SerializedName("valorColumnaU") val valorColumnaU: Double, // Metros de Tela
+    @SerializedName("valorColumnaC") val valorColumnaC: String,
+    @SerializedName("valorColumnaD") val valorColumnaD: String,
+    @SerializedName("valorColumnaE") val valorColumnaE: String,
+    @SerializedName("valorColumnaF") val valorColumnaF: Int,
+    @SerializedName("valorColumnaG") val valorColumnaG: Int,
+    @SerializedName("valorColumnaH") val valorColumnaH: String,
+    @SerializedName("valorColumnaI") val valorColumnaI: Int,
+    @SerializedName("valorColumnaJ") val valorColumnaJ: Int,
+    @SerializedName("valorColumnaK") val valorColumnaK: String,
+    @SerializedName("valorColumnaL") val valorColumnaL: Int,
+    @SerializedName("valorColumnaM") val valorColumnaM: Int,
+    @SerializedName("valorColumnaN") val valorColumnaN: String,
+    @SerializedName("valorColumnaO") val valorColumnaO: String,
+    @SerializedName("valorColumnaP") val valorColumnaP: String,
+    @SerializedName("valorColumnaQ") val valorColumnaQ: String,
+    @SerializedName("valorColumnaS") val valorColumnaS: String,
+    @SerializedName("valorColumnaT") val valorColumnaT: String?,
+    @SerializedName("valorColumnaU") val valorColumnaU: Double,
     @SerializedName("valorColumnaA") val valorColumnaA: String?
 )
 
@@ -81,7 +76,6 @@ interface GoogleAppsScriptService {
     @POST("exec")
     suspend fun addInspection(
         @Field("action") action: String = "addInspection",
-        // Campo 'uniqueId' ELIMINADO. Ahora lo devuelve el servidor.
         @Field("usuario") usuario: String,
         @Field("fecha") fecha: String,
         @Field("hojaDeRuta") hojaDeRuta: String,
@@ -115,7 +109,7 @@ interface GoogleAppsScriptService {
     @POST("exec")
     suspend fun updateTonalidades(
         @Field("action") action: String = "updateTonalidades",
-        @Field("updates") updates: String // JSON string de los ítems a actualizar
+        @Field("updates") updates: String
     ): ApiResponse
 
     @FormUrlEncoded
@@ -132,31 +126,14 @@ interface GoogleAppsScriptService {
         @Field("hojaDeRuta") hojaDeRuta: String
     ): InspectionRecordsResponse
 
-}
-
-object GoogleSheetsApi {
-    /**
-     * Pega aquí la URL de despliegue de tu Apps Script PERO sin el "/exec" final.
-     */
-    private const val BASE_URL =
-        "https://script.google.com/macros/s/AKfycbyMPARoOA3VpB28wo7pMT5gKPikS29NLGIEyUxxv0P9h1FJL2ZK7IyUMYvczTCBgIai/"
-
-    val service: GoogleAppsScriptService by lazy {
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
-        val client = OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(45, TimeUnit.SECONDS)
-            .writeTimeout(45, TimeUnit.SECONDS)
-            .addInterceptor(logging)
-            .build()
-
-        Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .client(client)
-            .build()
-            .create(GoogleAppsScriptService::class.java)
-    }
+    // NUEVO: Método para actualizar un registro de inspección
+    @FormUrlEncoded
+    @POST("exec")
+    suspend fun updateInspection(
+        @Field("action") action: String = "updateInspection",
+        @Field("uniqueId") uniqueId: String,
+        @Field("tipoCalidad") tipoCalidad: String,
+        @Field("tipoDeFalla") tipoDeFalla: String?,
+        @Field("metrosDeTela") metrosDeTela: Double
+    ): ApiResponse
 }

@@ -13,7 +13,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.ibero.data.network.GoogleSheetsApi
+import com.example.ibero.data.network.GoogleSheetsApi2
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -147,7 +147,7 @@ class PrimerRegistroActivity : AppCompatActivity() {
 
             try {
                 // Llama al método de la API para verificar la existencia
-                val response = GoogleSheetsApi.service.checkHojaRutaExistence(hojaDeRuta = hojaDeRuta)
+                val response = GoogleSheetsApi2.service.checkHojaRutaExistence(hojaDeRuta = hojaDeRuta)
 
                 withContext(Dispatchers.Main) {
                     if (response.status == "SUCCESS") {

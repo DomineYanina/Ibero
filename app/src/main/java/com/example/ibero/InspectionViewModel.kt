@@ -1,14 +1,12 @@
-package com.example.ibero.ui
+package com.example.ibero
 
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.*
-import com.example.ibero.ConnectionStatus
-import com.example.ibero.NetworkConnectivityObserver
 import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.Inspection
 import com.example.ibero.data.network.AddInspectionResponse
-import com.example.ibero.data.network.GoogleSheetsApi
+import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.repository.InspectionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -19,6 +17,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.Date
+import kotlinx.coroutines.delay
+import java.util.UUID // Importación necesaria
 
 class InspectionViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -32,14 +32,10 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
     private val _currentSessionInspections = MutableLiveData<MutableList<Inspection>>(mutableListOf())
     val currentSessionInspections: LiveData<MutableList<Inspection>> get() = _currentSessionInspections
 
-    // LiveData para el estado de carga
     private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> get() = _isLoading
 
-    // Mutex para asegurar que solo una sincronización se ejecute a la vez
     private val syncMutex = Mutex()
-
-    // Variable para almacenar los datos de la sesión actual de carga, usando el modelo Inspection
     private var sessionData: Inspection? = null
 
     init {
@@ -47,7 +43,6 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         repository = InspectionRepository(inspectionDao)
         allInspections = repository.allInspections.asLiveData()
 
-        // Observar el estado de la red para iniciar sincronización
         viewModelScope.launch {
             connectivityObserver.observe()
             connectivityObserver.connectionStatus.collectLatest { status ->
@@ -58,7 +53,6 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
             }
         }
 
-        // Observar la lista de inspecciones no sincronizadas para iniciar sincronización
         viewModelScope.launch {
             repository.unsyncedInspections
                 .map { it.isNotEmpty() }
@@ -72,12 +66,6 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    /**
-     * Guarda la información de la sesión de carga.
-     * Es llamada desde la actividad para inicializar el ViewModel con los datos
-     * de la hoja de ruta encontrados.
-     * Convierte los campos de tipo String a Int para que coincidan con el modelo Inspection.
-     */
     fun initSessionData(
         usuario: String,
         hojaDeRuta: String,
@@ -97,13 +85,11 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         otro: String
     ) {
         try {
-            // Creamos un objeto Inspection para la sesión con los datos disponibles.
-            // Los campos que se añadirán más tarde se inicializan con valores por defecto.
             sessionData = Inspection(
                 usuario = usuario,
                 fecha = fecha,
                 hojaDeRuta = hojaDeRuta,
-                tejeduria = tejeduria, // Corregido: tejeduria es de tipo String en tu clase Inspection
+                tejeduria = tejeduria,
                 telar = telar.toIntOrNull() ?: 0,
                 tintoreria = tintoreria.toIntOrNull() ?: 0,
                 articulo = articulo,
@@ -116,23 +102,17 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                 ignifugo = ignifugo,
                 impermeable = impermeable,
                 otro = otro,
-                // Proporcionamos valores por defecto para los campos que aún no tienen valor
-                tipoCalidad = "", // Corregido: tipoCalidad no puede ser nulo en tu clase Inspection
-                tipoDeFalla = null, // Corregido: tipoDeFalla es un String nulo
+                tipoCalidad = "",
+                tipoDeFalla = null,
                 metrosDeTela = 0.0,
-                uniqueId = "" // Corregido: uniqueId no puede ser nulo en tu clase Inspection
+                uniqueId = UUID.randomUUID().toString() // <<-- CAMBIO AQUI: Generar un UUID único
             )
         } catch (e: NumberFormatException) {
             Log.e("ViewModel", "Error al convertir un campo de String a Int. Revisar los datos de entrada.", e)
-            throw e // Lanza la excepción para que la actividad pueda manejar el error
+            throw e
         }
     }
 
-    /**
-     * Retorna la información de la sesión actual.
-     * Es llamada desde la actividad para crear nuevos registros de inspección
-     * con los datos de la sesión.
-     */
     fun getCurrentSessionData(): Inspection {
         return sessionData ?: throw IllegalStateException("Session data not initialized.")
     }
@@ -156,7 +136,12 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
 
     fun addInspectionToSessionList(inspection: Inspection) {
         val currentList = _currentSessionInspections.value ?: mutableListOf()
-        currentList.add(0, inspection)
+        val existingIndex = currentList.indexOfFirst { it.uniqueId == inspection.uniqueId }
+        if (existingIndex != -1) {
+            currentList[existingIndex] = inspection
+        } else {
+            currentList.add(0, inspection)
+        }
         _currentSessionInspections.value = currentList
     }
 
@@ -164,13 +149,8 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         _currentSessionInspections.value = mutableListOf()
     }
 
-    /**
-     * Sincroniza las inspecciones no enviadas con Google Sheets.
-     * Esta función solo se encarga de reintentar las subidas fallidas.
-     */
     fun performSync() {
         viewModelScope.launch(Dispatchers.IO) {
-            // Establecer el estado de carga al iniciar
             withContext(Dispatchers.Main) {
                 _isLoading.value = true
             }
@@ -189,7 +169,6 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                     withContext(Dispatchers.Main) {
                         _syncMessage.value = "No hay inspecciones pendientes de sincronizar."
                     }
-                    // Al final de la función, restablecer el estado de carga a false
                     withContext(Dispatchers.Main) {
                         _isLoading.value = false
                     }
@@ -203,12 +182,12 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
 
                 for (inspection in unsyncedInspections) {
                     try {
-                        val response: AddInspectionResponse = GoogleSheetsApi.service.addInspection(
+                        val response: AddInspectionResponse = GoogleSheetsApi2.service.addInspection(
                             action = "addInspection",
                             usuario = inspection.usuario,
                             fecha = inspection.fecha.time.toString(),
                             hojaDeRuta = inspection.hojaDeRuta,
-                            tejeduria = inspection.tejeduria, // tejeduria es String
+                            tejeduria = inspection.tejeduria,
                             telar = inspection.telar.toString(),
                             tintoreria = inspection.tintoreria.toString(),
                             articulo = inspection.articulo,
@@ -224,12 +203,13 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                             tipoCalidad = inspection.tipoCalidad,
                             tipoDeFalla = inspection.tipoDeFalla,
                             metrosDeTela = inspection.metrosDeTela,
-                            imageUrls = inspection.imageUrls.joinToString(",")
+                            imageUrls = inspection.imageUrls.joinToString(","),
+                            uniqueId = inspection.uniqueId // <<-- AÑADE ESTA LINEA
                         )
 
                         if (response.status == "SUCCESS" && response.data.uniqueId != null) {
                             val newUniqueId = response.data.uniqueId
-                            // Crear un nuevo objeto con el ID del servidor y la bandera de sincronización
+                            // Clave: Actualizar el registro local con el ID devuelto por el servidor
                             val updatedInspection = inspection.copy(uniqueId = newUniqueId, isSynced = true, imageUrls = emptyList())
                             repository.update(updatedInspection)
                             successfulSyncs++
@@ -252,30 +232,24 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                     _syncMessage.value = "Sincronización completada: $successfulSyncs exitosas, $failedSyncs fallidas."
                 }
             }
-            // Al final de la función, restablecer el estado de carga a false
             withContext(Dispatchers.Main) {
                 _isLoading.value = false
             }
         }
     }
 
-    /**
-     * Inserta una inspección y la sube inmediatamente a Google Sheets.
-     * Si la subida es exitosa, actualiza el registro localmente.
-     * Si falla, simplemente lo guarda localmente para su futura sincronización.
-     */
     suspend fun finalizeAndSync(inspection: Inspection): Boolean {
         withContext(Dispatchers.Main) {
             _isLoading.value = true
         }
 
         try {
-            val response: AddInspectionResponse = GoogleSheetsApi.service.addInspection(
+            val response: AddInspectionResponse = GoogleSheetsApi2.service.addInspection(
                 action = "addInspection",
                 usuario = inspection.usuario,
                 fecha = inspection.fecha.time.toString(),
                 hojaDeRuta = inspection.hojaDeRuta,
-                tejeduria = inspection.tejeduria, // tejeduria es String
+                tejeduria = inspection.tejeduria,
                 telar = inspection.telar.toString(),
                 tintoreria = inspection.tintoreria.toString(),
                 articulo = inspection.articulo,
@@ -291,35 +265,141 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                 tipoCalidad = inspection.tipoCalidad,
                 tipoDeFalla = inspection.tipoDeFalla,
                 metrosDeTela = inspection.metrosDeTela,
-                imageUrls = inspection.imageUrls.joinToString(",")
+                imageUrls = inspection.imageUrls.joinToString(","),
+                uniqueId = inspection.uniqueId // <<-- AÑADE ESTA LINEA
             )
 
             if (response.status == "SUCCESS" && response.data.uniqueId != null) {
                 val newUniqueId = response.data.uniqueId
-                // Se actualiza el registro localmente con el ID y el estado de sincronización.
                 val updatedInspection = inspection.copy(uniqueId = newUniqueId, isSynced = true, imageUrls = emptyList())
-                repository.insert(updatedInspection) // Reemplaza la inserción original
+                // Clave: Insertar el registro con el ID devuelto por el servidor
+                repository.insert(updatedInspection)
                 withContext(Dispatchers.Main) {
                     _isLoading.value = false
                 }
-                return true // Éxito
+                return true
             } else {
-                // Si falla la API, el registro se mantiene en la base de datos local
-                // con isSynced = false para que se reintente en el próximo performSync.
                 repository.insert(inspection)
                 withContext(Dispatchers.Main) {
                     _isLoading.value = false
                 }
-                return false // Fallo
+                return false
             }
         } catch (e: Exception) {
-            // Si hay un error de conexión, se inserta el registro en la base de datos local
             repository.insert(inspection)
             withContext(Dispatchers.Main) {
                 _isLoading.value = false
             }
             Log.e("ViewModel", "Error al finalizar y sincronizar", e)
-            return false // Fallo
+            return false
         }
+    }
+
+    // NUEVO MÉTODO: Actualiza el registro local y lo sincroniza con Google Sheets
+    suspend fun updateInspectionAndSync(inspection: Inspection) {
+        Log.d("UpdateDebug", "Llamada a updateInspectionAndSync en el ViewModel. UniqueId: ${inspection.uniqueId}")
+
+        // 1. Actualiza el registro en la base de datos local
+        try {
+            repository.update(inspection)
+            Log.d("UpdateDebug", "Registro local actualizado exitosamente.")
+        } catch (e: Exception) {
+            Log.e("UpdateError", "Error al actualizar el registro local: ${e.message}", e)
+        }
+
+        // 2. Notifica a la UI sobre el cambio en la lista de la sesión
+        addInspectionToSessionList(inspection)
+        Log.d("UpdateDebug", "Lista de la sesión actualizada.")
+
+        // 3. Intenta sincronizar el cambio con la nube
+        val success = syncOneInspection(inspection)
+        Log.d("UpdateDebug", "Intento de sincronización con la nube completado. Éxito: $success")
+    }
+
+    // NUEVO MÉTODO: Actualiza el registro local, lo sincroniza con la nube y finaliza
+    suspend fun updateInspectionAndFinalize(inspection: Inspection): Boolean {
+        // 1. Actualiza el registro en la base de datos local
+        repository.update(inspection)
+        // 2. Sincroniza y retorna el resultado
+        return syncOneInspection(inspection)
+    }
+
+    // NUEVO MÉTODO: Sincroniza un solo registro
+    private suspend fun syncOneInspection(inspection: Inspection): Boolean {
+        withContext(Dispatchers.Main) {
+            _isLoading.value = true
+            Log.d("UpdateDebug", "Indicador de carga activado.")
+        }
+
+        if (!connectivityObserver.hasInternet()) {
+            withContext(Dispatchers.Main) {
+                _syncMessage.value = "No hay conexión a Internet. El registro se guardó localmente."
+                _isLoading.value = false
+            }
+            Log.e("UpdateError", "No hay conexión a Internet.")
+            return false
+        }
+
+        // NUEVA LÓGICA: Lógica de reintento
+        val maxRetries = 3
+        var currentRetry = 0
+        var success = false
+
+        while (currentRetry < maxRetries && !success) {
+            try {
+                Log.d("UpdateDebug", "Iniciando llamada a la API para updateInspection (Intento ${currentRetry + 1}).")
+                val response = GoogleSheetsApi2.service.updateInspection(
+                    uniqueId = inspection.uniqueId,
+                    tipoCalidad = inspection.tipoCalidad,
+                    tipoDeFalla = inspection.tipoDeFalla,
+                    metrosDeTela = inspection.metrosDeTela
+                )
+                Log.d("UpdateDebug", "Respuesta de la API recibida. Status: ${response.status}, Message: ${response.message}")
+
+                if (response.status == "SUCCESS") {
+                    val updatedInspection = inspection.copy(isSynced = true)
+                    repository.update(updatedInspection)
+                    withContext(Dispatchers.Main) {
+                        _syncMessage.value = "Registro actualizado exitosamente en la nube."
+                    }
+                    Log.d("UpdateDebug", "Actualización exitosa en la nube y en la base de datos local.")
+                    success = true
+                } else {
+                    withContext(Dispatchers.Main) {
+                        _syncMessage.value = "Fallo al actualizar el registro en la nube: ${response.message}"
+                    }
+                    Log.e("UpdateError", "Fallo en la API. Status: ${response.status}, Message: ${response.message}")
+                }
+            } catch (e: Exception) {
+                Log.e("UpdateError", "Error al sincronizar una inspección: ${e.message}", e)
+                if (e is retrofit2.HttpException && e.code() == 429) {
+                    // Si es un error 429, esperamos un poco antes de reintentar
+                    val waitTime = (2000 * (currentRetry + 1)).toLong() // Espera 2, 4, 6 segundos, etc.
+                    Log.w("UpdateWarning", "Recibido error 429. Esperando ${waitTime / 1000} segundos antes de reintentar...")
+                    withContext(Dispatchers.Main) {
+                        _syncMessage.value = "Demasiadas peticiones. Reintentando en ${waitTime / 1000} segundos..."
+                    }
+                    delay(waitTime)
+                } else {
+                    // Para cualquier otro error, no reintentamos
+                    withContext(Dispatchers.Main) {
+                        _syncMessage.value = "Error al actualizar. Se guardó localmente. ${e.message}"
+                    }
+                    break // Salimos del bucle de reintento
+                }
+            } finally {
+                currentRetry++
+            }
+        }
+
+        // Si después de todos los reintentos no hubo éxito, limpiamos el estado de carga
+        if (!success) {
+            withContext(Dispatchers.Main) {
+                _isLoading.value = false
+                Log.d("UpdateDebug", "Indicador de carga desactivado. Finalizado.")
+            }
+        }
+
+        return success
     }
 }

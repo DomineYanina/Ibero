@@ -19,7 +19,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.ibero.data.Inspection
 import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.ui.InspectionHistoryAdapter
-import com.example.ibero.ui.InspectionViewModel
+import com.example.ibero.InspectionViewModel
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.Dispatchers
