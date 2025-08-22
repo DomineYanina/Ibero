@@ -343,6 +343,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
                 // Llama al nuevo método del ViewModel y deja que el ViewModel
                 // se encargue de mostrar y ocultar el estado de carga
                 viewModel.updateInspectionAndSync(inspectionToUpdate)
+                resetForm()
             }
         } else {
             Log.e("UpdateError", "No se pudo crear el objeto Inspection para actualizar. Objeto nulo.")
