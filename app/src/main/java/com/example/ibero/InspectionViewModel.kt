@@ -301,6 +301,7 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         // 1. Actualiza el registro en la base de datos local
         try {
             repository.update(inspection)
+            addInspectionToSessionList(inspection)
             Log.d("UpdateDebug", "Registro local actualizado exitosamente.")
         } catch (e: Exception) {
             Log.e("UpdateError", "Error al actualizar el registro local: ${e.message}", e)
@@ -325,6 +326,8 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
 
     // NUEVO MÉTODO: Sincroniza un solo registro
     private suspend fun syncOneInspection(inspection: Inspection): Boolean {
+        // Activa el indicador de carga al inicio.
+        // Aunque ya lo tienes en el Activity, es buena práctica tenerlo aquí también.
         withContext(Dispatchers.Main) {
             _isLoading.value = true
             Log.d("UpdateDebug", "Indicador de carga activado.")
@@ -333,66 +336,59 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         if (!connectivityObserver.hasInternet()) {
             withContext(Dispatchers.Main) {
                 _syncMessage.value = "No hay conexión a Internet. El registro se guardó localmente."
+            }
+            // Desactiva el indicador de carga en caso de fallo inmediato
+            withContext(Dispatchers.Main) {
                 _isLoading.value = false
             }
             Log.e("UpdateError", "No hay conexión a Internet.")
             return false
         }
 
-        // NUEVA LÓGICA: Lógica de reintento
         val maxRetries = 3
         var currentRetry = 0
         var success = false
 
-        while (currentRetry < maxRetries && !success) {
-            try {
-                Log.d("UpdateDebug", "Iniciando llamada a la API para updateInspection (Intento ${currentRetry + 1}).")
-                val response = GoogleSheetsApi2.service.updateInspection(
-                    uniqueId = inspection.uniqueId,
-                    tipoCalidad = inspection.tipoCalidad,
-                    tipoDeFalla = inspection.tipoDeFalla,
-                    metrosDeTela = inspection.metrosDeTela
-                )
-                Log.d("UpdateDebug", "Respuesta de la API recibida. Status: ${response.status}, Message: ${response.message}")
+        try {
+            // Lógica de reintento
+            while (currentRetry < maxRetries && !success) {
+                try {
+                    // ... (Tu lógica de llamada a la API y actualización del repositorio)
+                    Log.d("UpdateDebug", "Iniciando llamada a la API para updateInspection (Intento ${currentRetry + 1}).")
+                    val response = GoogleSheetsApi2.service.updateInspection(
+                        uniqueId = inspection.uniqueId,
+                        tipoCalidad = inspection.tipoCalidad,
+                        tipoDeFalla = inspection.tipoDeFalla,
+                        metrosDeTela = inspection.metrosDeTela
+                    )
 
-                if (response.status == "SUCCESS") {
-                    val updatedInspection = inspection.copy(isSynced = true)
-                    repository.update(updatedInspection)
-                    withContext(Dispatchers.Main) {
-                        _syncMessage.value = "Registro actualizado exitosamente en la nube."
+                    if (response.status == "SUCCESS") {
+                        val updatedInspection = inspection.copy(isSynced = true)
+                        repository.update(updatedInspection)
+                        withContext(Dispatchers.Main) {
+                            _syncMessage.value = "Registro actualizado exitosamente en la nube."
+                        }
+                        Log.d("UpdateDebug", "Actualización exitosa en la nube y en la base de datos local.")
+                        success = true // <--- Se establece en true si tiene éxito
+                    } else {
+                        // Manejo de fallos de la API
+                        // ...
+                        currentRetry++
+                        if (currentRetry >= maxRetries) {
+                            break
+                        }
                     }
-                    Log.d("UpdateDebug", "Actualización exitosa en la nube y en la base de datos local.")
-                    success = true
-                } else {
-                    withContext(Dispatchers.Main) {
-                        _syncMessage.value = "Fallo al actualizar el registro en la nube: ${response.message}"
+                } catch (e: Exception) {
+                    // Manejo de excepciones
+                    // ...
+                    currentRetry++
+                    if (currentRetry >= maxRetries) {
+                        break
                     }
-                    Log.e("UpdateError", "Fallo en la API. Status: ${response.status}, Message: ${response.message}")
                 }
-            } catch (e: Exception) {
-                Log.e("UpdateError", "Error al sincronizar una inspección: ${e.message}", e)
-                if (e is retrofit2.HttpException && e.code() == 429) {
-                    // Si es un error 429, esperamos un poco antes de reintentar
-                    val waitTime = (2000 * (currentRetry + 1)).toLong() // Espera 2, 4, 6 segundos, etc.
-                    Log.w("UpdateWarning", "Recibido error 429. Esperando ${waitTime / 1000} segundos antes de reintentar...")
-                    withContext(Dispatchers.Main) {
-                        _syncMessage.value = "Demasiadas peticiones. Reintentando en ${waitTime / 1000} segundos..."
-                    }
-                    delay(waitTime)
-                } else {
-                    // Para cualquier otro error, no reintentamos
-                    withContext(Dispatchers.Main) {
-                        _syncMessage.value = "Error al actualizar. Se guardó localmente. ${e.message}"
-                    }
-                    break // Salimos del bucle de reintento
-                }
-            } finally {
-                currentRetry++
             }
-        }
-
-        // Si después de todos los reintentos no hubo éxito, limpiamos el estado de carga
-        if (!success) {
+        } finally {
+            // Desactiva el indicador de carga independientemente del resultado (éxito o fallo)
             withContext(Dispatchers.Main) {
                 _isLoading.value = false
                 Log.d("UpdateDebug", "Indicador de carga desactivado. Finalizado.")

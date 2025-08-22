@@ -309,7 +309,11 @@ class SegundoRegistroActivity : AppCompatActivity() {
                 btnCancelar.isVisible = false
                 btnVolver.isVisible = false
                 btnIncorporar.isVisible = true
-                btnGuardarRegistro.isVisible = true
+                if(editingInspection!=null){
+                    btnGuardarRegistro.isVisible=false
+                } else{
+                    btnGuardarRegistro.isVisible=true
+                }
             } else {
                 btnCancelar.isVisible = true
                 btnVolver.isVisible = true
@@ -335,29 +339,16 @@ class SegundoRegistroActivity : AppCompatActivity() {
         )
 
         if (inspectionToUpdate != null) {
-            // Agregamos un log para confirmar que la función se ejecuta
-            Log.d("UpdateDebug", "Iniciando updateInspectionAndSync desde la Activity")
-
-            try {
-                lifecycleScope.launch {
-                    // Llama al nuevo método del ViewModel
-                    viewModel.updateInspectionAndSync(inspectionToUpdate)
-                    resetForm()
-                    editingInspection = null // Resetea el estado de edición
-                    btnIncorporar.text = "Continuar" // Restaura el texto del botón
-                    // Agregamos un log para confirmar que la operación finalizó
-                    Log.d("UpdateDebug", "Operación de actualización finalizada.")
-                }
-            } catch (e: Exception) {
-                // Este log captura cualquier error que ocurra al iniciar la corrutina
-                Log.e("UpdateError", "Error al lanzar la corrutina de actualización: ${e.message}", e)
+            lifecycleScope.launch {
+                // Llama al nuevo método del ViewModel y deja que el ViewModel
+                // se encargue de mostrar y ocultar el estado de carga
+                viewModel.updateInspectionAndSync(inspectionToUpdate)
             }
         } else {
             Log.e("UpdateError", "No se pudo crear el objeto Inspection para actualizar. Objeto nulo.")
         }
     }
 
-    // NUEVO MÉTODO: Actualiza el registro y finaliza la sesión
     private fun updateInspectionAndFinalize() {
         val inspectionToUpdate = editingInspection?.copy(
             tipoCalidad = spinnerTipoCalidad.text.toString(),

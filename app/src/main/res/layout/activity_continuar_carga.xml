@@ -97,8 +97,9 @@
                         style="@style/Widget.MaterialComponents.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:backgroundTint="#F5B027"
                         android:text="Limpiar"
-                        android:textColor="#F44336"/>
+                        android:textColor="#000000"/>
             </LinearLayout>
 
             <LinearLayout
@@ -131,8 +132,9 @@
                         style="@style/Widget.MaterialComponents.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:backgroundTint="#F5B027"
                         android:text="Limpiar"
-                        android:textColor="#F44336"/>
+                        android:textColor="#000000"/>
             </LinearLayout>
 
             <LinearLayout
@@ -163,8 +165,9 @@
                         style="@style/Widget.MaterialComponents.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:backgroundTint="#F5B027"
                         android:text="Limpiar"
-                        android:textColor="#F44336"/>
+                        android:textColor="#000000"/>
             </LinearLayout>
 
             <LinearLayout
