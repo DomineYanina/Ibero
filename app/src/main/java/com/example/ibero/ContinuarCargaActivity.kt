@@ -52,6 +52,14 @@ class ContinuarCargaActivity : AppCompatActivity() {
     private lateinit var historyAdapter: InspectionHistoryAdapter
     private val TAG = "ContinuarCargaLog"
 
+    // Nuevas variables para los botones de limpieza
+    private lateinit var btnLimpiarCalidad: MaterialButton
+    private lateinit var btnLimpiarFalla: MaterialButton
+    private lateinit var btnLimpiarMetros: MaterialButton
+
+    // Nueva variable para el contenedor de tipo de falla
+    private lateinit var containerTipoFalla: LinearLayout
+
     // Nueva variable de estado para la lógica de los botones
     private var hasRegisteredAnItem = false
 
@@ -97,6 +105,14 @@ class ContinuarCargaActivity : AppCompatActivity() {
         editMetrosDeTela = findViewById(R.id.edit_metros_de_tela)
         btnIncorporar = findViewById(R.id.btn_incorporar)
         btnGuardarRegistro = findViewById(R.id.btn_guardar_registro)
+
+        // Inicializar los nuevos botones de limpieza
+        btnLimpiarCalidad = findViewById(R.id.btn_limpiar_calidad)
+        btnLimpiarFalla = findViewById(R.id.btn_limpiar_falla)
+        btnLimpiarMetros = findViewById(R.id.btn_limpiar_metros)
+
+        // Inicializar el contenedor de tipo de falla
+        containerTipoFalla = findViewById(R.id.container_tipo_falla)
     }
 
     private fun setupHistoryRecyclerView() {
@@ -148,10 +164,10 @@ class ContinuarCargaActivity : AppCompatActivity() {
         spinnerTipoCalidad.setOnItemClickListener { parent, _, position, _ ->
             val selectedCalidad = parent.getItemAtPosition(position).toString()
             if (selectedCalidad == "Segunda") {
-                layoutTipoFalla.visibility = View.VISIBLE
+                containerTipoFalla.visibility = View.VISIBLE
             } else {
-                layoutTipoFalla.visibility = View.GONE
-                spinnerTipoFalla.setText("")
+                containerTipoFalla.visibility = View.GONE
+                spinnerTipoFalla.setText("", false)
             }
         }
 
@@ -182,6 +198,19 @@ class ContinuarCargaActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        // Listeners para los nuevos botones de limpieza
+        btnLimpiarCalidad.setOnClickListener {
+            resetForm(fieldToReset = "calidad")
+        }
+
+        btnLimpiarFalla.setOnClickListener {
+            resetForm(fieldToReset = "falla")
+        }
+
+        btnLimpiarMetros.setOnClickListener {
+            resetForm(fieldToReset = "metros")
         }
     }
 
@@ -402,11 +431,38 @@ class ContinuarCargaActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Resetea el formulario de un nuevo registro.
+     */
     private fun resetNewRecordForm() {
-        spinnerTipoCalidad.setText("", false)
-        layoutTipoFalla.visibility = View.GONE
-        spinnerTipoFalla.setText("", false)
-        editMetrosDeTela.setText("")
+        resetForm()
+    }
+
+    /**
+     * Resetea los campos del formulario de registro de un registro.
+     * @param fieldToReset El campo a resetear. Si es nulo, se resetean todos.
+     */
+    private fun resetForm(fieldToReset: String? = null) {
+        when (fieldToReset) {
+            "calidad" -> {
+                spinnerTipoCalidad.setText("", false)
+                containerTipoFalla.visibility = View.GONE
+                spinnerTipoFalla.setText("", false)
+            }
+            "falla" -> {
+                spinnerTipoFalla.setText("", false)
+            }
+            "metros" -> {
+                editMetrosDeTela.text.clear()
+            }
+            else -> {
+                spinnerTipoCalidad.setText("", false)
+                containerTipoFalla.visibility = View.GONE
+                spinnerTipoFalla.setText("", false)
+                editMetrosDeTela.text.clear()
+            }
+        }
+        toggleFormButtons()
     }
 
     private fun clearAllFormsAndState() {
