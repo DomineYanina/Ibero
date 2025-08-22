@@ -39,6 +39,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
     private lateinit var btnCancelar: MaterialButton
     private lateinit var recyclerViewExistingRecords: RecyclerView
     private lateinit var formAndRecordsContainer: LinearLayout
+    private lateinit var contenedorHojaRuta: LinearLayout
     private lateinit var textExistingRecordsTitle: TextView
     private lateinit var loadingOverlay: View
     private lateinit var progressBar: View
@@ -100,6 +101,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
         editMetrosDeTela = findViewById(R.id.edit_metros_de_tela)
         btnIncorporar = findViewById(R.id.btn_incorporar)
         btnGuardarRegistro = findViewById(R.id.btn_guardar_registro)
+        contenedorHojaRuta = findViewById(R.id.hoja_ruta_container)
 
         btnLimpiarCalidad = findViewById(R.id.btn_limpiar_calidad)
         btnLimpiarFalla = findViewById(R.id.btn_limpiar_falla)
@@ -222,7 +224,12 @@ class ContinuarCargaActivity : AppCompatActivity() {
             if (hayInput) {
                 btnCancelar.isVisible = false
                 btnIncorporar.isVisible = true
-                btnGuardarRegistro.isVisible = true
+                if(editingHistoricalInspection != null){
+                    btnGuardarRegistro.isVisible = false
+                    btnCancelar.isVisible = true
+                } else{
+                    btnGuardarRegistro.isVisible = true
+                }
             } else {
                 btnCancelar.isVisible = true
                 btnIncorporar.isVisible = false
@@ -395,6 +402,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
     }
 
     private fun preloadFormForEditing(historicalInspection: HistoricalInspection) {
+        btnBuscar.isVisible = false
         Log.d(TAG, "preloadFormForEditing: Estableciendo editingHistoricalInspection con uniqueId: ${historicalInspection.uniqueId}")
         editingHistoricalInspection = historicalInspection
 
@@ -411,14 +419,17 @@ class ContinuarCargaActivity : AppCompatActivity() {
         editMetrosDeTela.setText(inspection.metrosDeTela.toString())
 
         btnIncorporar.text = "Actualizar"
-        btnGuardarRegistro.text = "Actualizar y Finalizar"
+        //btnGuardarRegistro.text = "Actualizar y Finalizar"
         Toast.makeText(this, "Modifica los campos y toca Actualizar", Toast.LENGTH_SHORT).show()
 
         toggleFormButtons()
+        btnGuardarRegistro.isVisible = false
     }
 
     private fun updateInspectionAndSync() {
         Log.d(TAG, "updateInspectionAndSync: Iniciando. editingHistoricalInspection es nulo? ${editingHistoricalInspection == null}")
+        btnBuscar.isVisible = true
+        btnGuardarRegistro.isVisible = true
         val inspectionUniqueId = editingHistoricalInspection?.uniqueId
 
         if (inspectionUniqueId != null) {
