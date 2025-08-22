@@ -10,16 +10,19 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.ibero.data.HistoricalInspection
 import com.example.ibero.data.Inspection
+import com.example.ibero.data.toInspection
 import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.ui.InspectionHistoryAdapter
-import com.example.ibero.InspectionViewModel
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +30,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.UUID
-import androidx.core.widget.addTextChangedListener
 
 class ContinuarCargaActivity : AppCompatActivity() {
 
@@ -60,31 +62,25 @@ class ContinuarCargaActivity : AppCompatActivity() {
     // Nueva variable para el contenedor de tipo de falla
     private lateinit var containerTipoFalla: LinearLayout
 
-    // Nueva variable de estado para la lógica de los botones
+    // Nuevas variables de estado para la lógica de los botones y la edición
     private var hasRegisteredAnItem = false
+    private var editingHistoricalInspection: HistoricalInspection? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_continuar_carga)
-        // Inicialización de vistas
+
         initViews()
-        // Configuración del RecyclerView y el adaptador
         setupHistoryRecyclerView()
-        // Inicialización del ViewModel
         val factory = InspectionViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory)[InspectionViewModel::class.java]
-        // Configuración de listeners para los botones y spinners
         setupListeners()
-        // Observa el estado de carga del ViewModel
         observeViewModel()
 
-        // Ocultar los botones de registro al inicio
         btnIncorporar.isVisible = false
         btnGuardarRegistro.isVisible = false
-        // Ocultar el formulario de registro al inicio
         formAndRecordsContainer.visibility = View.GONE
 
-        // Monitorear los campos para mostrar los botones de registro
         setupFieldWatchers()
     }
 
@@ -98,7 +94,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
         loadingOverlay = findViewById(R.id.loading_overlay)
         progressBar = findViewById(R.id.progress_bar)
 
-        // Vistas del formulario de ingreso
         spinnerTipoCalidad = findViewById(R.id.spinner_tipo_calidad)
         layoutTipoFalla = findViewById(R.id.layout_tipo_de_falla)
         spinnerTipoFalla = findViewById(R.id.spinner_tipo_de_falla)
@@ -106,30 +101,26 @@ class ContinuarCargaActivity : AppCompatActivity() {
         btnIncorporar = findViewById(R.id.btn_incorporar)
         btnGuardarRegistro = findViewById(R.id.btn_guardar_registro)
 
-        // Inicializar los nuevos botones de limpieza
         btnLimpiarCalidad = findViewById(R.id.btn_limpiar_calidad)
         btnLimpiarFalla = findViewById(R.id.btn_limpiar_falla)
         btnLimpiarMetros = findViewById(R.id.btn_limpiar_metros)
 
-        // Inicializar el contenedor de tipo de falla
         containerTipoFalla = findViewById(R.id.container_tipo_falla)
     }
 
     private fun setupHistoryRecyclerView() {
         historyAdapter = InspectionHistoryAdapter(mutableListOf()) { historicalInspection ->
-            // Manejar clics en el historial (opcional)
-            Toast.makeText(this, "Hoja de Ruta: ${historicalInspection.hojaDeRuta}", Toast.LENGTH_SHORT).show()
+            Log.d(TAG, "RecyclerView clic en item: ID único = ${historicalInspection.uniqueId}")
+            showEditConfirmationDialog(historicalInspection)
         }
         recyclerViewExistingRecords.layoutManager = LinearLayoutManager(this)
         recyclerViewExistingRecords.adapter = historyAdapter
     }
 
     private fun observeViewModel() {
-        // Observa el estado de carga del ViewModel para habilitar/deshabilitar vistas
         viewModel.isLoading.observe(this) { isLoading ->
             setViewsEnabled(!isLoading)
         }
-        // Observa los mensajes de sincronización del ViewModel
         viewModel.syncMessage.observe(this) { message ->
             message?.let {
                 Toast.makeText(this, it, Toast.LENGTH_LONG).show()
@@ -157,7 +148,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
             finish()
         }
 
-        // Configuración de spinners
         val calidadTypes = arrayOf("Primera", "Segunda")
         val calidadAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, calidadTypes)
         spinnerTipoCalidad.setAdapter(calidadAdapter)
@@ -178,29 +168,32 @@ class ContinuarCargaActivity : AppCompatActivity() {
         val fallaAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, fallaTypes)
         spinnerTipoFalla.setAdapter(fallaAdapter)
 
-        // Listener para el botón "Incorporar"
         btnIncorporar.setOnClickListener {
+            Log.d(TAG, "Botón 'Incorporar' presionado. editingHistoricalInspection es nulo? ${editingHistoricalInspection == null}")
             if (validateForm()) {
-                saveInspectionAndResetForm()
-                // Actualizamos el estado después de incorporar el primer registro
-                hasRegisteredAnItem = true
-                // Cambiamos el texto del botón Cancelar
-                btnCancelar.text = "Ir a Inicio"
+                if (editingHistoricalInspection != null) {
+                    updateInspectionAndSync()
+                } else {
+                    saveInspectionAndResetForm()
+                }
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Listener para el botón "Guardar Registro"
         btnGuardarRegistro.setOnClickListener {
+            Log.d(TAG, "Botón 'Guardar Registro' presionado. editingHistoricalInspection es nulo? ${editingHistoricalInspection == null}")
             if (validateForm()) {
-                saveInspectionAndFinalize()
+                if (editingHistoricalInspection != null) {
+                    updateInspectionAndFinalize()
+                } else {
+                    saveInspectionAndFinalize()
+                }
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Listeners para los nuevos botones de limpieza
         btnLimpiarCalidad.setOnClickListener {
             resetForm(fieldToReset = "calidad")
         }
@@ -220,12 +213,8 @@ class ContinuarCargaActivity : AppCompatActivity() {
         spinnerTipoFalla.addTextChangedListener { toggleFormButtons() }
     }
 
-    /**
-     * Lógica para mostrar/ocultar los botones de registro según el estado de los campos.
-     */
     private fun toggleFormButtons() {
-        // La lógica solo se aplica si se encontró una hoja de ruta y no se ha presionado "Incorporar"
-        if (formAndRecordsContainer.visibility == View.VISIBLE && !hasRegisteredAnItem) {
+        if (formAndRecordsContainer.visibility == View.VISIBLE) {
             val hayInput = spinnerTipoCalidad.text.isNotBlank() ||
                     spinnerTipoFalla.text.isNotBlank() ||
                     editMetrosDeTela.text.isNotBlank()
@@ -240,21 +229,9 @@ class ContinuarCargaActivity : AppCompatActivity() {
                 btnGuardarRegistro.isVisible = false
             }
         }
-        // Si ya se ha incorporado un registro, los botones de registro permanecen visibles
-        else if (hasRegisteredAnItem) {
-            btnCancelar.text = "Ir a Inicio"
-            btnCancelar.isVisible = true
-            btnIncorporar.isVisible = true
-            btnGuardarRegistro.isVisible = true
-        }
     }
 
-    /**
-     * Habilita o deshabilita las vistas de la pantalla.
-     * @param enabled El estado deseado para las vistas.
-     */
     private fun setViewsEnabled(enabled: Boolean) {
-        // Habilitar/deshabilitar vistas principales
         editHojaDeRuta.isEnabled = enabled
         btnBuscar.isEnabled = enabled
         btnCancelar.isEnabled = enabled
@@ -263,15 +240,11 @@ class ContinuarCargaActivity : AppCompatActivity() {
         spinnerTipoCalidad.isEnabled = enabled
         spinnerTipoFalla.isEnabled = enabled
         editMetrosDeTela.isEnabled = enabled
-        // Ocultar/mostrar el overlay y el progress bar
         loadingOverlay.visibility = if (enabled) View.GONE else View.VISIBLE
         progressBar.visibility = if (enabled) View.GONE else View.VISIBLE
         Log.d(TAG, "Estado de las vistas cambiado a: $enabled")
     }
 
-    /**
-     * Lógica de búsqueda y precarga de datos de la Hoja de Ruta.
-     */
     private fun searchAndFetchRecords(hojaDeRutaInput: String) {
         setViewsEnabled(false)
         Toast.makeText(this, "Buscando Hoja de Ruta e historial...", Toast.LENGTH_SHORT).show()
@@ -284,41 +257,33 @@ class ContinuarCargaActivity : AppCompatActivity() {
                     val records = response.data.records
                     if (response.status == "success" && records.isNotEmpty()) {
                         Log.d(TAG, "Registros encontrados: ${records.size}")
-
                         val firstRecord = records.first()
-
-                        val telarInt = firstRecord.telar?.toInt() ?: 0
-                        val tintoreriaInt = firstRecord.tintoreria?.toInt() ?: 0
-                        val colorInt = firstRecord.color?.toInt() ?: 0
-                        val rolloDeUrdidoInt = firstRecord.rolloDeUrdido?.toInt() ?: 0
-                        val cadenaInt = firstRecord.cadena?.toInt() ?: 0
-                        val anchoDeRolloInt = firstRecord.anchoDeRollo?.toInt() ?: 0
 
                         viewModel.initSessionData(
                             usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido",
                             hojaDeRuta = firstRecord.hojaDeRuta,
                             fecha = Date(),
                             tejeduria = firstRecord.tejeduria ?: "",
-                            telar = telarInt.toString(),
-                            tintoreria = tintoreriaInt.toString(),
+                            telar = firstRecord.telar?.toString() ?: "0",
+                            tintoreria = firstRecord.tintoreria?.toString() ?: "0",
                             articulo = firstRecord.articulo,
-                            color = colorInt.toString(),
-                            rolloDeUrdido = rolloDeUrdidoInt.toString(),
+                            color = firstRecord.color?.toString() ?: "0",
+                            rolloDeUrdido = firstRecord.rolloDeUrdido?.toString() ?: "0",
                             orden = firstRecord.orden ?: "",
-                            cadena = cadenaInt.toString(),
-                            anchoDeRollo = anchoDeRolloInt.toString(),
+                            cadena = firstRecord.cadena?.toString() ?: "0",
+                            anchoDeRollo = firstRecord.anchoDeRollo?.toString() ?: "0",
                             esmerilado = firstRecord.esmerilado ?: "",
                             ignifugo = firstRecord.ignifugo ?: "",
                             impermeable = firstRecord.impermeable ?: "",
-                            otro = firstRecord.otro ?: ""
+                            otro = firstRecord.otro ?: "",
+                            uniqueId = firstRecord.uniqueId ?: ""
                         )
 
+                        Log.d(TAG, "uniqueId del primer registro: ${firstRecord.uniqueId}")
                         textExistingRecordsTitle.text = "Registros para la Hoja de Ruta: ${firstRecord.hojaDeRuta} - Artículo: ${firstRecord.articulo}"
                         formAndRecordsContainer.visibility = View.VISIBLE
                         historyAdapter.updateList(records)
                         Toast.makeText(this@ContinuarCargaActivity, "Hoja de Ruta encontrada. Historial cargado.", Toast.LENGTH_LONG).show()
-
-                        // Llamar a la lógica de visibilidad inicial después de una búsqueda exitosa
                         toggleFormButtons()
                     } else {
                         Toast.makeText(this@ContinuarCargaActivity, "No se encontraron registros para la Hoja de Ruta. Por favor, revisa el número.", Toast.LENGTH_LONG).show()
@@ -340,7 +305,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
 
     private fun validateForm(): Boolean {
         var isValid = true
-
         val tipoCalidadInput = spinnerTipoCalidad.text.toString().trim()
         val tipoFallaInput = spinnerTipoFalla.text.toString().trim()
         val metrosDeTelaInput = editMetrosDeTela.text.toString().trim()
@@ -351,30 +315,23 @@ class ContinuarCargaActivity : AppCompatActivity() {
         } else {
             findViewById<TextInputLayout>(R.id.layout_tipo_calidad).error = null
         }
-
         if (tipoCalidadInput == "Segunda" && tipoFallaInput.isEmpty()) {
             findViewById<TextInputLayout>(R.id.layout_tipo_de_falla).error = "Tipo de Falla es obligatorio"
             isValid = false
         } else if (tipoCalidadInput == "Primera") {
             findViewById<TextInputLayout>(R.id.layout_tipo_de_falla).error = null
         }
-
         if (metrosDeTelaInput.isEmpty()) {
             findViewById<TextInputLayout>(R.id.layout_metros_de_tela).error = "Metros de Tela es obligatorio"
             isValid = false
         } else {
             findViewById<TextInputLayout>(R.id.layout_metros_de_tela).error = null
         }
-
         return isValid
     }
 
-    /**
-     * Crea un objeto Inspection a partir de los datos del formulario y los datos de sesión del ViewModel.
-     */
     private fun createInspectionObject(): Inspection {
         val sessionData = viewModel.getCurrentSessionData()
-
         val tipoCalidad = spinnerTipoCalidad.text.toString()
         val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoFalla.text.toString() else null
         val metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
@@ -391,31 +348,22 @@ class ContinuarCargaActivity : AppCompatActivity() {
         )
     }
 
-    /**
-     * Este método es para el botón "Continuar".
-     * Inserta el registro localmente.
-     */
     private fun saveInspectionAndResetForm() {
         val inspection = createInspectionObject()
         lifecycleScope.launch {
             viewModel.insertInspection(inspection)
             resetNewRecordForm()
-            // Llamar a la lógica de visibilidad después de resetear el formulario
+            hasRegisteredAnItem = true
+            btnCancelar.text = "Ir a Inicio"
             toggleFormButtons()
         }
     }
 
-    /**
-     * Este método es para el botón "Guardar Registro" y "Finalizar".
-     * Llama al método `finalizeAndSync` del ViewModel.
-     */
     private fun saveInspectionAndFinalize() {
         val inspection = createInspectionObject()
         lifecycleScope.launch {
             val success = viewModel.finalizeAndSync(inspection)
-
             viewModel.clearCurrentSessionList()
-
             if (success) {
                 Toast.makeText(this@ContinuarCargaActivity, "Registro subido y finalizado.", Toast.LENGTH_SHORT).show()
             } else {
@@ -431,18 +379,128 @@ class ContinuarCargaActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Resetea el formulario de un nuevo registro.
-     */
-    private fun resetNewRecordForm() {
-        resetForm()
+    private fun showEditConfirmationDialog(historicalInspection: HistoricalInspection) {
+        Log.d(TAG, "showEditConfirmationDialog llamado para uniqueId: ${historicalInspection.uniqueId}")
+        AlertDialog.Builder(this)
+            .setTitle("Modificar Registro")
+            .setMessage("¿Deseas modificar este registro?")
+            .setPositiveButton("Sí") { dialog, _ ->
+                preloadFormForEditing(historicalInspection)
+                dialog.dismiss()
+            }
+            .setNegativeButton("No") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 
-    /**
-     * Resetea los campos del formulario de registro de un registro.
-     * @param fieldToReset El campo a resetear. Si es nulo, se resetean todos.
-     */
+    private fun preloadFormForEditing(historicalInspection: HistoricalInspection) {
+        Log.d(TAG, "preloadFormForEditing: Estableciendo editingHistoricalInspection con uniqueId: ${historicalInspection.uniqueId}")
+        editingHistoricalInspection = historicalInspection
+
+        val inspection = historicalInspection.toInspection()
+
+        spinnerTipoCalidad.setText(inspection.tipoCalidad, false)
+        if (inspection.tipoCalidad == "Segunda") {
+            containerTipoFalla.visibility = View.VISIBLE
+            spinnerTipoFalla.setText(inspection.tipoDeFalla ?: "", false)
+        } else {
+            containerTipoFalla.visibility = View.GONE
+            spinnerTipoFalla.setText("", false)
+        }
+        editMetrosDeTela.setText(inspection.metrosDeTela.toString())
+
+        btnIncorporar.text = "Actualizar"
+        btnGuardarRegistro.text = "Actualizar y Finalizar"
+        Toast.makeText(this, "Modifica los campos y toca Actualizar", Toast.LENGTH_SHORT).show()
+
+        toggleFormButtons()
+    }
+
+    private fun updateInspectionAndSync() {
+        Log.d(TAG, "updateInspectionAndSync: Iniciando. editingHistoricalInspection es nulo? ${editingHistoricalInspection == null}")
+        val inspectionUniqueId = editingHistoricalInspection?.uniqueId
+
+        if (inspectionUniqueId != null) {
+            Log.d(TAG, "updateInspectionAndSync: uniqueId no es nulo. Procediendo con la actualización.")
+            val updatedInspection = createUpdatedInspectionObject()
+
+            lifecycleScope.launch {
+                val success = viewModel.updateInspectionAndSync(updatedInspection)
+
+                if (success.toString().isNotEmpty()) {
+                    Toast.makeText(this@ContinuarCargaActivity, "Registro actualizado en la nube.", Toast.LENGTH_SHORT).show()
+                    searchAndFetchRecords(editHojaDeRuta.text.toString().trim())
+                } else {
+                    Toast.makeText(this@ContinuarCargaActivity, "No se pudo actualizar en la nube. Intenta nuevamente.", Toast.LENGTH_LONG).show()
+                }
+
+                resetForm()
+            }
+        } else {
+            Log.e(TAG, "updateInspectionAndSync: ERROR. uniqueId es nulo. No se puede actualizar el registro.")
+            Toast.makeText(this, "No hay registro seleccionado para actualizar.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateInspectionAndFinalize() {
+        Log.d(TAG, "updateInspectionAndFinalize: Iniciando. editingHistoricalInspection es nulo? ${editingHistoricalInspection == null}")
+        val inspectionUniqueId = editingHistoricalInspection?.uniqueId
+
+        if (inspectionUniqueId != null) {
+            Log.d(TAG, "updateInspectionAndFinalize: uniqueId no es nulo. Procediendo con la actualización y finalización.")
+            val updatedInspection = createUpdatedInspectionObject()
+
+            lifecycleScope.launch {
+                val success = viewModel.updateInspectionAndFinalize(updatedInspection)
+
+                if (success) {
+                    Toast.makeText(this@ContinuarCargaActivity, "Registro actualizado y finalizado.", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@ContinuarCargaActivity, "No se pudo subir a la nube. Finalizando.", Toast.LENGTH_LONG).show()
+                }
+
+                viewModel.clearCurrentSessionList()
+
+                val userFromSession = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
+                val intent = Intent(this@ContinuarCargaActivity, HomeActivity::class.java)
+                intent.putExtra("LOGGED_IN_USER", userFromSession)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(intent)
+                finish()
+            }
+        } else {
+            Log.e(TAG, "updateInspectionAndFinalize: ERROR. uniqueId es nulo. No se puede actualizar y finalizar.")
+            Toast.makeText(this, "No hay registro seleccionado para actualizar.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun createUpdatedInspectionObject(): Inspection {
+        val sessionData = viewModel.getCurrentSessionData()
+        val tipoCalidad = spinnerTipoCalidad.text.toString()
+        val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoFalla.text.toString() else null
+        val metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
+        Log.d(TAG, "createUpdatedInspectionObject: Creando nuevo objeto de inspección con uniqueId: ${editingHistoricalInspection?.uniqueId}")
+
+        return sessionData.copy(
+            uniqueId = editingHistoricalInspection?.uniqueId ?: UUID.randomUUID().toString(),
+            tipoCalidad = tipoCalidad,
+            tipoDeFalla = tipoDeFalla,
+            metrosDeTela = metrosDeTela,
+            isSynced = false,
+        )
+    }
+
+    private fun resetNewRecordForm() {
+        Log.d(TAG, "resetNewRecordForm: Reseteando formulario y eliminando el registro en edición.")
+        resetForm()
+        editingHistoricalInspection = null
+        btnIncorporar.text = "Continuar"
+        btnGuardarRegistro.text = "Guardar Registro"
+    }
+
     private fun resetForm(fieldToReset: String? = null) {
+        Log.d(TAG, "resetForm: Llamado con fieldToReset = $fieldToReset")
         when (fieldToReset) {
             "calidad" -> {
                 spinnerTipoCalidad.setText("", false)
@@ -462,6 +520,9 @@ class ContinuarCargaActivity : AppCompatActivity() {
                 editMetrosDeTela.text.clear()
             }
         }
+        editingHistoricalInspection = null
+        btnIncorporar.text = "Continuar"
+        btnGuardarRegistro.text = "Guardar Registro"
         toggleFormButtons()
     }
 

@@ -82,7 +82,8 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         esmerilado: String,
         ignifugo: String,
         impermeable: String,
-        otro: String
+        otro: String,
+        uniqueId: String
     ) {
         try {
             sessionData = Inspection(
@@ -105,7 +106,7 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                 tipoCalidad = "",
                 tipoDeFalla = null,
                 metrosDeTela = 0.0,
-                uniqueId = UUID.randomUUID().toString() // <<-- CAMBIO AQUI: Generar un UUID único
+                uniqueId = uniqueId
             )
         } catch (e: NumberFormatException) {
             Log.e("ViewModel", "Error al convertir un campo de String a Int. Revisar los datos de entrada.", e)
@@ -188,8 +189,8 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                             fecha = inspection.fecha.time.toString(),
                             hojaDeRuta = inspection.hojaDeRuta,
                             tejeduria = inspection.tejeduria,
-                            telar = inspection.telar.toString(),
-                            tintoreria = inspection.tintoreria.toString(),
+                            telar = inspection.telar,
+                            tintoreria = inspection.tintoreria,
                             articulo = inspection.articulo,
                             color = inspection.color,
                             rolloDeUrdido = inspection.rolloDeUrdido,
@@ -203,7 +204,6 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                             tipoCalidad = inspection.tipoCalidad,
                             tipoDeFalla = inspection.tipoDeFalla,
                             metrosDeTela = inspection.metrosDeTela,
-                            imageUrls = inspection.imageUrls.joinToString(","),
                             uniqueId = inspection.uniqueId // <<-- AÑADE ESTA LINEA
                         )
 
@@ -250,8 +250,8 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                 fecha = inspection.fecha.time.toString(),
                 hojaDeRuta = inspection.hojaDeRuta,
                 tejeduria = inspection.tejeduria,
-                telar = inspection.telar.toString(),
-                tintoreria = inspection.tintoreria.toString(),
+                telar = inspection.telar,
+                tintoreria = inspection.tintoreria,
                 articulo = inspection.articulo,
                 color = inspection.color,
                 rolloDeUrdido = inspection.rolloDeUrdido,
@@ -265,7 +265,6 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                 tipoCalidad = inspection.tipoCalidad,
                 tipoDeFalla = inspection.tipoDeFalla,
                 metrosDeTela = inspection.metrosDeTela,
-                imageUrls = inspection.imageUrls.joinToString(","),
                 uniqueId = inspection.uniqueId // <<-- AÑADE ESTA LINEA
             )
 

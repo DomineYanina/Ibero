@@ -15,41 +15,38 @@ interface GoogleSheetsApiService {
         @Query("hojaDeRuta") hojaDeRuta: String
     ): GoogleSheetsResponse
 
-    @FormUrlEncoded
     @POST("exec")
     suspend fun updateInspection(
-        @Field("action") action: String = "updateInspection",
-        @Field("uniqueId") uniqueId: String,
-        @Field("tipoCalidad") tipoCalidad: String,
-        @Field("tipoDeFalla") tipoDeFalla: String?,
-        @Field("metrosDeTela") metrosDeTela: Double
-    ): ApiResponse
+        @Query("action") action: String = "updateInspection",
+        @Query("uniqueId") uniqueId: String,
+        @Query("tipoCalidad") tipoCalidad: String,
+        @Query("tipoDeFalla") tipoDeFalla: String?,
+        @Query("metrosDeTela") metrosDeTela: Double
+    ): UpdateInspectionResponse
 
-    @FormUrlEncoded
     @POST("exec")
     suspend fun addInspection(
-        @Field("action") action: String = "addInspection",
-        @Field("usuario") usuario: String,
-        @Field("fecha") fecha: String,
-        @Field("hojaDeRuta") hojaDeRuta: String,
-        @Field("tejeduria") tejeduria: String,
-        @Field("telar") telar: String,
-        @Field("tintoreria") tintoreria: String,
-        @Field("articulo") articulo: String,
-        @Field("color") color: Int,
-        @Field("rolloDeUrdido") rolloDeUrdido: Int,
-        @Field("orden") orden: String,
-        @Field("cadena") cadena: Int,
-        @Field("anchoDeRollo") anchoDeRollo: Int,
-        @Field("esmerilado") esmerilado: String?,
-        @Field("ignifugo") ignifugo: String?,
-        @Field("impermeable") impermeable: String?,
-        @Field("otro") otro: String?,
-        @Field("tipoCalidad") tipoCalidad: String?,
-        @Field("tipoDeFalla") tipoDeFalla: String?,
-        @Field("metrosDeTela") metrosDeTela: Double,
-        @Field("imageUrls") imageUrls: String,
-        @Field("uniqueId") uniqueId: String // <<-- CAMBIO AQUI: AÑADIR EL PARAMETRO
+        @Query("action") action: String = "addInspection",
+        @Query("usuario") usuario: String,
+        @Query("hojaDeRuta") hojaDeRuta: String,
+        @Query("fecha") fecha: String,
+        @Query("tejeduria") tejeduria: String,
+        @Query("telar") telar: Int,
+        @Query("tintoreria") tintoreria: Int,
+        @Query("articulo") articulo: String,
+        @Query("color") color: Int,
+        @Query("rolloDeUrdido") rolloDeUrdido: Int,
+        @Query("orden") orden: String,
+        @Query("cadena") cadena: Int,
+        @Query("anchoDeRollo") anchoDeRollo: Int,
+        @Query("esmerilado") esmerilado: String,
+        @Query("ignifugo") ignifugo: String,
+        @Query("impermeable") impermeable: String,
+        @Query("otro") otro: String,
+        @Query("tipoCalidad") tipoCalidad: String,
+        @Query("tipoDeFalla") tipoDeFalla: String?,
+        @Query("metrosDeTela") metrosDeTela: Double,
+        @Query("uniqueId") uniqueId: String
     ): AddInspectionResponse
 
     @FormUrlEncoded
@@ -76,7 +73,7 @@ interface GoogleSheetsApiService {
 }
 
 object GoogleSheetsApi2 {
-    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbz_dsYnvVkCNNg_rfm_Q3UUgBf2hFlap_EbItw80m8C3g1w5FVQysmxhH-mFH1Y1YeiRA/"
+    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbzsnbzN_1UQUUH3f7W2qVsYrICeRxIhPsFQqRGqKo7g9hfVuLaxxalNjQ0TO3SY6fC2qg/"
 
     val service: GoogleSheetsApiService by lazy {
         Retrofit.Builder()
