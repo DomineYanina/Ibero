@@ -34,21 +34,8 @@
             android:drawablePadding="8dp"
             android:layout_marginBottom="16dp"/>
 
-    <Button
-            android:id="@+id/btn_agregar_tonalidades"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Agregar Tonalidades"
-            android:padding="16dp"
-            android:textSize="18sp"
-            android:backgroundTint="#2196F3"
-            android:textColor="@android:color/white"
-            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-            android:drawableStart="@drawable/ic_edit_white"
-            android:drawablePadding="8dp"
-            android:layout_marginBottom="16dp"/>
-
     <!-- Nuevo botón para continuar una carga existente -->
+
     <Button
             android:id="@+id/btn_continuar_carga"
             android:layout_width="match_parent"
@@ -60,6 +47,20 @@
             android:textColor="@android:color/white"
             style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
             android:drawableStart="@drawable/ic_history"
+            android:drawablePadding="8dp"
+            android:layout_marginBottom="16dp" />
+
+    <Button
+            android:id="@+id/btn_agregar_tonalidades"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Agregar Tonalidades"
+            android:padding="16dp"
+            android:textSize="18sp"
+            android:backgroundTint="#2196F3"
+            android:textColor="@android:color/white"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+            android:drawableStart="@drawable/ic_edit_white"
             android:drawablePadding="8dp" />
 
 </LinearLayout>
