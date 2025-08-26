@@ -403,7 +403,9 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
         val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         val inspectionDate = dateFormat.parse(fecha) ?: Date()
-        val uniqueId = UUID.randomUUID().toString()
+
+        // Si estamos editando, usa el uniqueId del objeto de edición, de lo contrario, genera uno nuevo
+        val uniqueId = editingInspection?.uniqueId ?: UUID.randomUUID().toString()
 
         return Inspection(
             usuario = usuario,
