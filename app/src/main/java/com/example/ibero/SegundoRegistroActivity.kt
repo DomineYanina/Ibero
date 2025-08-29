@@ -3,30 +3,42 @@ package com.example.ibero
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.widget.*
 import android.view.View
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
+import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.ibero.data.Inspection
-import com.example.ibero.ui.CurrentSessionInspectionAdapter
 import com.example.ibero.InspectionViewModel
+import com.example.ibero.data.Inspection
+import com.example.ibero.data.network.GoogleSheetsApi2
+import com.example.ibero.data.network.GoogleSheetsApiService
+import com.example.ibero.ui.CurrentSessionInspectionAdapter
 import com.google.android.material.textfield.TextInputLayout
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
-import androidx.core.widget.addTextChangedListener
-import android.widget.LinearLayout
-import androidx.appcompat.app.AlertDialog
 
 class SegundoRegistroActivity : AppCompatActivity() {
 
     private lateinit var viewModel: InspectionViewModel
+    private lateinit var apiService: GoogleSheetsApiService
 
     private lateinit var spinnerTipoCalidad: AutoCompleteTextView
     private lateinit var layoutTipoDeFalla: TextInputLayout
@@ -50,8 +62,10 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var loadingOverlay: View
 
+    private lateinit var progressBarFalla: ProgressBar
+
     private var hasRegisteredAnItem = false
-    private var editingInspection: Inspection? = null // NUEVA VARIABLE DE ESTADO
+    private var editingInspection: Inspection? = null
 
     // Datos recibidos
     private lateinit var usuario: String
@@ -77,6 +91,8 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
         val factory = InspectionViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
+
+        apiService = GoogleSheetsApi2.service
 
         usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
         fecha = intent.getStringExtra("FECHA") ?: ""
@@ -105,7 +121,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
         btnIncorporar.isVisible = false
         btnGuardarRegistro.isVisible = false
-        btnVolver.isVisible = true // A diferencia de la otra actividad, aquí el botón Volver siempre es visible hasta que se incorpore un ítem.
+        btnVolver.isVisible = true
 
         setupFieldWatchers()
 
@@ -164,6 +180,8 @@ class SegundoRegistroActivity : AppCompatActivity() {
         btnLimpiarMetros = findViewById(R.id.btn_limpiar_metros)
 
         containerTipoDeFalla = findViewById(R.id.container_tipo_falla)
+
+        progressBarFalla = findViewById(R.id.progress_bar)
     }
 
     private fun setupSpinners() {
@@ -171,14 +189,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         val tipoCalidadAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, tipoCalidadOptions)
         spinnerTipoCalidad.setAdapter(tipoCalidadAdapter)
 
-        val tipoDeFallaOptions = arrayOf(
-            "Aureolas", "Clareadas", "Falla de cadena", "Falla de trama", "Falla de urdido",
-            "Gota Espaciada", "Goteras", "Hongos", "Mancha con patrón", "Manchas de aceite",
-            "Marcas de sanforizado", "Parada de engomadora", "Parada telar", "Paradas",
-            "Quebraduras", "Vainillas"
-        )
-        val tipoDeFallaAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, tipoDeFallaOptions)
-        spinnerTipoDeFalla.setAdapter(tipoDeFallaAdapter)
+        fetchTiposDeFalla()
 
         spinnerTipoCalidad.setOnItemClickListener { _, _, _, _ ->
             val selectedQuality = spinnerTipoCalidad.text.toString()
@@ -187,6 +198,45 @@ class SegundoRegistroActivity : AppCompatActivity() {
             } else {
                 containerTipoDeFalla.visibility = View.GONE
                 spinnerTipoDeFalla.setText("", false)
+            }
+        }
+    }
+
+    private fun fetchTiposDeFalla() {
+        progressBarFalla.visibility = View.VISIBLE
+        spinnerTipoDeFalla.isEnabled = false
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = apiService.getTiposDeFallas()
+
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful && response.body()?.status == "SUCCESS") {
+                        val tiposDeFallas = response.body()?.data?.tiposDeFallas ?: emptyList()
+                        val tipoDeFallaAdapter = ArrayAdapter(
+                            this@SegundoRegistroActivity,
+                            android.R.layout.simple_dropdown_item_1line,
+                            tiposDeFallas
+                        )
+                        spinnerTipoDeFalla.setAdapter(tipoDeFallaAdapter)
+                    } else {
+                        Log.e("SegundoRegistroActivity", "Error al cargar tipos de falla: ${response.body()?.message ?: "Mensaje desconocido"}")
+                        Toast.makeText(this@SegundoRegistroActivity, "Error al cargar tipos de falla.", Toast.LENGTH_SHORT).show()
+                        val fallbackList = listOf("Error de carga")
+                        val fallbackAdapter = ArrayAdapter(this@SegundoRegistroActivity, android.R.layout.simple_dropdown_item_1line, fallbackList)
+                        spinnerTipoDeFalla.setAdapter(fallbackAdapter)
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Log.e("SegundoRegistroActivity", "Error de red al obtener tipos de falla: ${e.message}")
+                    Toast.makeText(this@SegundoRegistroActivity, "Error de conexión. No se pudieron cargar los tipos de falla.", Toast.LENGTH_LONG).show()
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    progressBarFalla.visibility = View.GONE
+                    spinnerTipoDeFalla.isEnabled = true
+                }
             }
         }
     }
@@ -246,14 +296,12 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
     private fun setupCurrentSessionRecyclerView() {
         currentSessionInspectionAdapter = CurrentSessionInspectionAdapter(mutableListOf()) { inspection ->
-            // Manejar clic en el item de la lista
             showEditConfirmationDialog(inspection)
         }
         recyclerViewCurrentSessionRecords.layoutManager = LinearLayoutManager(this)
         recyclerViewCurrentSessionRecords.adapter = currentSessionInspectionAdapter
     }
 
-    // NUEVO MÉTODO: Muestra un diálogo para confirmar la edición
     private fun showEditConfirmationDialog(inspection: Inspection) {
         AlertDialog.Builder(this)
             .setTitle("Modificar Registro")
@@ -268,10 +316,8 @@ class SegundoRegistroActivity : AppCompatActivity() {
             .show()
     }
 
-    // NUEVO MÉTODO: Precarga el formulario con los datos para la edición
     private fun preloadFormForEditing(inspection: Inspection) {
-        editingInspection = inspection // Guarda el registro que se está editando
-
+        editingInspection = inspection
         spinnerTipoCalidad.setText(inspection.tipoCalidad, false)
 
         if (inspection.tipoCalidad == "Segunda") {
@@ -340,8 +386,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
         if (inspectionToUpdate != null) {
             lifecycleScope.launch {
-                // Llama al nuevo método del ViewModel y deja que el ViewModel
-                // se encargue de mostrar y ocultar el estado de carga
                 viewModel.updateInspectionAndSync(inspectionToUpdate)
                 resetForm()
             }
@@ -404,7 +448,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
         val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         val inspectionDate = dateFormat.parse(fecha) ?: Date()
 
-        // Si estamos editando, usa el uniqueId del objeto de edición, de lo contrario, genera uno nuevo
         val uniqueId = editingInspection?.uniqueId ?: UUID.randomUUID().toString()
 
         return Inspection(
@@ -454,10 +497,8 @@ class SegundoRegistroActivity : AppCompatActivity() {
             }
         }
 
-        // Al resetear, también restauramos el estado de edición
         editingInspection = null
         btnIncorporar.text = "Continuar"
-
         toggleButtonsBasedOnInput()
     }
 

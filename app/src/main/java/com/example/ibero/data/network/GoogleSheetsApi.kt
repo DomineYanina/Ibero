@@ -19,6 +19,36 @@ data class ArticulosData(
     val articulos: List<String>
 )
 
+data class TiposDeFallaResponse(
+    val status: String,
+    val message: String,
+    val data: TiposDeFallaData?
+)
+
+data class TiposDeFallaData(
+    val tiposDeFallas: List<String>
+)
+
+data class TejeduriasResponse(
+    val status: String,
+    val message: String,
+    val data: TejeduriasData?
+)
+
+data class TejeduriasData(
+    val tejedurias: List<String>
+)
+
+data class TelaresResponse(
+    val status: String,
+    val message: String,
+    val data: TelaresData?
+)
+
+data class TelaresData(
+    val telares: List<Int>
+)
+
 interface GoogleSheetsApiService {
 
     @POST("exec")
@@ -96,12 +126,32 @@ interface GoogleSheetsApiService {
     suspend fun getArticulos(
         @Field("action") action: String = "getArticulos"
     ): Response<ArticulosResponse>
+
+    // Añade la nueva función para obtener los tipos de fallas
+    @FormUrlEncoded
+    @POST("exec")
+    suspend fun getTiposDeFallas(
+        @Field("action") action: String = "getTiposDeFallas"
+    ): Response<TiposDeFallaResponse>
+
+    @FormUrlEncoded
+    @POST("exec")
+    suspend fun getTejedurias(
+        @Field("action") action: String = "getTejedurias"
+    ): Response<TejeduriasResponse>
+
+    // Nueva función para obtener telares
+    @FormUrlEncoded
+    @POST("exec")
+    suspend fun getTelares(
+        @Field("action") action: String = "getTelares"
+    ): Response<TelaresResponse>
 }
 
 // Objeto singleton para acceder al servicio de red
 object GoogleSheetsApi2 {
     // Es mejor usar un nombre más genérico si centralizarás todas las llamadas.
-    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbxbB6AhPrypjd7d5rv_1dU7_ro3ai9G3vN7fDonzpertt4gaX89dVPSqZBv2JO0l4vZ1A/"
+    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbwcLdaiU99eWa3SqXrViRX8uVablMIv9agjfuevBxM4kmTn8VP9It_vKhLuCIatm7BDrg/"
 
     val service: GoogleSheetsApiService by lazy {
         Retrofit.Builder()
