@@ -3,10 +3,15 @@ package com.example.ibero
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.ibero.HomeActivity
+import com.example.ibero.R
 import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.data.network.GoogleSheetsApiService
 import kotlinx.coroutines.CoroutineScope
@@ -19,6 +24,8 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var editUsername: EditText
     private lateinit var editPassword: EditText
     private lateinit var btnLogin: Button
+    private lateinit var loadingSpinner: ProgressBar
+    private lateinit var formContainer: LinearLayout // Agregamos una referencia al nuevo contenedor
 
     private lateinit var apiService: GoogleSheetsApiService
 
@@ -26,12 +33,13 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
-        // Inicializa Retrofit a través de la clase singleton que ya creaste
         apiService = GoogleSheetsApi2.service
 
         editUsername = findViewById(R.id.edit_username)
         editPassword = findViewById(R.id.edit_password)
         btnLogin = findViewById(R.id.btn_login)
+        loadingSpinner = findViewById(R.id.loading_spinner)
+        formContainer = findViewById(R.id.form_container) // Inicializamos el contenedor
 
         btnLogin.setOnClickListener {
             performLogin()
@@ -47,13 +55,12 @@ class LoginActivity : AppCompatActivity() {
             return
         }
 
-        // Muestra una barra de progreso o deshabilita el botón si es necesario
-        // showProgress(true)
+        // 1. Mostrar el ícono de carga y deshabilitar el formulario
+        showLoading(true)
 
         // Ejecuta la petición de red en una corrutina
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Llama a la nueva función directamente desde el servicio centralizado
                 val response = apiService.checkUserCredentials(
                     username = username,
                     password = password
@@ -80,8 +87,30 @@ class LoginActivity : AppCompatActivity() {
                     Toast.makeText(this@LoginActivity, "Error de conexión. Intente de nuevo.", Toast.LENGTH_SHORT).show()
                 }
             } finally {
-                // Oculta la barra de progreso
-                // showProgress(false)
+                // 2. Ocultar el ícono de carga y habilitar el formulario, sin importar el resultado
+                withContext(Dispatchers.Main) {
+                    showLoading(false)
+                }
+            }
+        }
+    }
+
+    private fun showLoading(isLoading: Boolean) {
+        if (isLoading) {
+            loadingSpinner.visibility = View.VISIBLE
+            formContainer.alpha = 0.5f // Hace el formulario semitransparente
+            formContainer.isEnabled = false
+            for (i in 0 until formContainer.childCount) {
+                val child = formContainer.getChildAt(i)
+                child.isEnabled = false
+            }
+        } else {
+            loadingSpinner.visibility = View.GONE
+            formContainer.alpha = 1.0f // Restablece la transparencia
+            formContainer.isEnabled = true
+            for (i in 0 until formContainer.childCount) {
+                val child = formContainer.getChildAt(i)
+                child.isEnabled = true
             }
         }
     }

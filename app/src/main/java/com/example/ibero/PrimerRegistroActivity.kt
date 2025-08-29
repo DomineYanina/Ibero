@@ -13,7 +13,9 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.ibero.data.network.GoogleAppsScriptService
 import com.example.ibero.data.network.GoogleSheetsApi2
+import com.example.ibero.data.network.GoogleSheetsApiService
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,16 +47,18 @@ class PrimerRegistroActivity : AppCompatActivity() {
     private lateinit var btnNext: Button
     private lateinit var btnCancelar: Button
 
-    // --- CAMBIO AÑADIDO ---
     private lateinit var progressBar: ProgressBar
-    // Lista de vistas a habilitar/deshabilitar
     private lateinit var inputFields: List<View>
+
+    private lateinit var apiService: GoogleSheetsApiService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_primer_registro)
 
         loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
+
+        apiService = GoogleSheetsApi2.service
 
         initViews()
         setupSpinners()
@@ -82,7 +86,6 @@ class PrimerRegistroActivity : AppCompatActivity() {
         btnNext = findViewById(R.id.btn_next)
         btnCancelar = findViewById(R.id.btn_cancelar_primer_registro)
 
-        // --- CAMBIO AÑADIDO ---
         progressBar = findViewById(R.id.progress_bar_loading)
         inputFields = listOf(
             editFecha, editHojaDeRuta, spinnerTejeduria, spinnerTelar, editTintoreria,
@@ -103,13 +106,49 @@ class PrimerRegistroActivity : AppCompatActivity() {
         val telarAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, telarOptions)
         spinnerTelar.setAdapter(telarAdapter)
 
-        val articuloOptions = arrayOf(
-            "75", "193", "530", "531", "569", "1101", "1015", "1080/2", "1080/16", "1080/F", "1116",
-            "3004", "3005", "3008", "3010", "3013", "3034", "3036", "3073-TB", "3073-TB BLACK", "3073-TN",
-            "3073-TN BLACK", "3075", "3080", "3080P", "3117", "3132", "3122/24", "3126", "3127", "3130", "DC"
-        )
-        val articuloAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, articuloOptions)
-        spinnerArticulo.setAdapter(articuloAdapter)
+        // Llamada de red para obtener los artículos
+        fetchArticulos()
+    }
+
+    private fun fetchArticulos() {
+        // Muestra el progreso de carga para el spinner de Artículos
+        progressBar.visibility = View.VISIBLE
+        spinnerArticulo.isEnabled = false
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = apiService.getArticulos()
+
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful && response.body()?.status == "SUCCESS") {
+                        val articulos = response.body()?.data?.articulos ?: emptyList()
+                        val articuloAdapter = ArrayAdapter(
+                            this@PrimerRegistroActivity,
+                            android.R.layout.simple_dropdown_item_1line,
+                            articulos
+                        )
+                        spinnerArticulo.setAdapter(articuloAdapter)
+                    } else {
+                        Log.e("PrimerRegistroActivity", "Error al cargar artículos: ${response.body()?.message ?: "Mensaje desconocido"}")
+                        Toast.makeText(this@PrimerRegistroActivity, "Error al cargar artículos.", Toast.LENGTH_SHORT).show()
+                        // Puedes cargar una lista de emergencia o dejarlo vacío
+                        val fallbackList = listOf("Error de carga")
+                        val fallbackAdapter = ArrayAdapter(this@PrimerRegistroActivity, android.R.layout.simple_dropdown_item_1line, fallbackList)
+                        spinnerArticulo.setAdapter(fallbackAdapter)
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Log.e("PrimerRegistroActivity", "Error de red al obtener artículos: ${e.message}")
+                    Toast.makeText(this@PrimerRegistroActivity, "Error de conexión. No se pudieron cargar los artículos.", Toast.LENGTH_LONG).show()
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    spinnerArticulo.isEnabled = true
+                }
+            }
+        }
     }
 
     private fun setupListeners() {
@@ -119,7 +158,6 @@ class PrimerRegistroActivity : AppCompatActivity() {
 
         btnNext.setOnClickListener {
             if (validateForm()) {
-                // Validación local pasada, ahora verificar en Google Sheets
                 checkHojaDeRutaExistence()
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
@@ -130,7 +168,6 @@ class PrimerRegistroActivity : AppCompatActivity() {
             val loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
             val homeIntent = Intent(this, HomeActivity::class.java)
             homeIntent.putExtra("LOGGED_IN_USER", loggedInUser)
-
             startActivity(homeIntent)
             finish()
         }
@@ -138,30 +175,20 @@ class PrimerRegistroActivity : AppCompatActivity() {
 
     private fun checkHojaDeRutaExistence() {
         val hojaDeRuta = editHojaDeRuta.text.toString().trim()
-
         CoroutineScope(Dispatchers.IO).launch {
-            // --- CAMBIO AÑADIDO: Mostrar estado de carga ---
-            withContext(Dispatchers.Main) {
-                setLoadingState(true)
-            }
-
+            withContext(Dispatchers.Main) { setLoadingState(true) }
             try {
-                // Llama al método de la API para verificar la existencia
                 val response = GoogleSheetsApi2.service.checkHojaRutaExistence(hojaDeRuta = hojaDeRuta)
-
                 withContext(Dispatchers.Main) {
                     if (response.status == "SUCCESS") {
                         if (response.data.exists) {
-                            // La hoja de ruta YA existe, mostrar error y limpiar campo
                             Toast.makeText(this@PrimerRegistroActivity, "Error: La hoja de ruta ya existe.", Toast.LENGTH_LONG).show()
                             editHojaDeRuta.text.clear()
                             editHojaDeRuta.requestFocus()
                         } else {
-                            // La hoja de ruta NO existe, proceder al siguiente paso
                             navigateToNextActivity()
                         }
                     } else {
-                        // Error del servidor (ej. Hoja no encontrada)
                         Toast.makeText(this@PrimerRegistroActivity, "Error en la verificación: ${response.message}", Toast.LENGTH_LONG).show()
                     }
                 }
@@ -171,15 +198,11 @@ class PrimerRegistroActivity : AppCompatActivity() {
                     Log.e("PrimerRegistroActivity", "Error al verificar hoja de ruta", e)
                 }
             } finally {
-                // --- CAMBIO AÑADIDO: Ocultar estado de carga, sin importar el resultado ---
-                withContext(Dispatchers.Main) {
-                    setLoadingState(false)
-                }
+                withContext(Dispatchers.Main) { setLoadingState(false) }
             }
         }
     }
 
-    // --- NUEVA FUNCIÓN: Manejar el estado de carga ---
     private fun setLoadingState(isLoading: Boolean) {
         progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         for (field in inputFields) {
@@ -238,13 +261,6 @@ class PrimerRegistroActivity : AppCompatActivity() {
         datePickerDialog.show()
     }
 
-    private fun formatHojaDeRuta(hojaDeRutaInput: String): String {
-        val cleanedInput = hojaDeRutaInput.trim()
-        val calendar = Calendar.getInstance()
-        val year = calendar.get(Calendar.YEAR).toString().takeLast(2)
-        return "$cleanedInput-a$year"
-    }
-
     private fun validateForm(): Boolean {
         var isValid = true
         val requiredEditTexts = listOf(
@@ -282,7 +298,6 @@ class PrimerRegistroActivity : AppCompatActivity() {
                 findViewById<TextInputLayout>(parentLayoutId(id)).error = null
             }
         }
-
         return isValid
     }
 

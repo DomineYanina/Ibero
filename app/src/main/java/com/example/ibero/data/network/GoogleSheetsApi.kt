@@ -8,6 +8,17 @@ import retrofit2.http.Query
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 
+data class ArticulosResponse(
+    val status: String,
+    val message: String,
+    val data: ArticulosData? // El data puede ser null
+)
+
+// Modifica ArticulosData para que contenga solo la lista de strings
+data class ArticulosData(
+    val articulos: List<String>
+)
+
 interface GoogleSheetsApiService {
 
     @POST("exec")
@@ -79,12 +90,18 @@ interface GoogleSheetsApiService {
         @Field("username") username: String,
         @Field("password") password: String
     ): Response<ApiResponse>
+
+    @FormUrlEncoded
+    @POST("exec")
+    suspend fun getArticulos(
+        @Field("action") action: String = "getArticulos"
+    ): Response<ArticulosResponse>
 }
 
 // Objeto singleton para acceder al servicio de red
 object GoogleSheetsApi2 {
     // Es mejor usar un nombre más genérico si centralizarás todas las llamadas.
-    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbw7T0fEr42kxQKz9bmm36yw8KvMHZLkPjbld-BWM4FqyXfJtpmPPkZRfQMUzB7HPGngiw/"
+    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbxbB6AhPrypjd7d5rv_1dU7_ro3ai9G3vN7fDonzpertt4gaX89dVPSqZBv2JO0l4vZ1A/"
 
     val service: GoogleSheetsApiService by lazy {
         Retrofit.Builder()
