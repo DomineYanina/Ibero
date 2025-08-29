@@ -1,5 +1,6 @@
 package com.example.ibero.data.network
 
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.POST
@@ -63,17 +64,27 @@ interface GoogleSheetsApiService {
         @Field("hojaDeRuta") hojaDeRuta: String
     ): TonalidadesResponse
 
-
     @FormUrlEncoded
     @POST("exec")
     suspend fun updateTonalidades(
         @Field("action") action: String = "updateTonalidades",
         @Field("updates") updates: String
     ): ApiResponse
+
+    // Nueva función para el inicio de sesión
+    @FormUrlEncoded
+    @POST("exec")
+    suspend fun checkUserCredentials(
+        @Field("action") action: String = "checkUserCredentials",
+        @Field("username") username: String,
+        @Field("password") password: String
+    ): Response<ApiResponse>
 }
 
+// Objeto singleton para acceder al servicio de red
 object GoogleSheetsApi2 {
-    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbzsnbzN_1UQUUH3f7W2qVsYrICeRxIhPsFQqRGqKo7g9hfVuLaxxalNjQ0TO3SY6fC2qg/"
+    // Es mejor usar un nombre más genérico si centralizarás todas las llamadas.
+    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbw7T0fEr42kxQKz9bmm36yw8KvMHZLkPjbld-BWM4FqyXfJtpmPPkZRfQMUzB7HPGngiw/"
 
     val service: GoogleSheetsApiService by lazy {
         Retrofit.Builder()
