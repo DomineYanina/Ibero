@@ -77,6 +77,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this, factory)[InspectionViewModel::class.java]
         setupListeners()
         observeViewModel()
+        fetchFallaTypes() // Nueva llamada para cargar los tipos de fallas
 
         btnIncorporar.isVisible = false
         btnGuardarRegistro.isVisible = false
@@ -163,12 +164,8 @@ class ContinuarCargaActivity : AppCompatActivity() {
             }
         }
 
-        val fallaTypes = arrayOf("Aureolas", "Clareadas", "Falla de cadena", "Falla de trama", "Falla de urdido",
-            "Gota Espaciada", "Goteras", "Hongos", "Mancha con patrón", "Manchas de aceite",
-            "Marcas de sanforizado", "Parada de engomadora", "Parada telar", "Paradas",
-            "Quebraduras", "Vainillas")
-        val fallaAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, fallaTypes)
-        spinnerTipoFalla.setAdapter(fallaAdapter)
+        // Se elimina la lista hardcodeada de fallas. Ahora se cargará dinámicamente.
+        // La configuración del adapter se mueve a la nueva función fetchFallaTypes().
 
         btnIncorporar.setOnClickListener {
             Log.d(TAG, "Botón 'Incorporar' presionado. editingHistoricalInspection es nulo? ${editingHistoricalInspection == null}")
@@ -213,6 +210,32 @@ class ContinuarCargaActivity : AppCompatActivity() {
         editMetrosDeTela.addTextChangedListener { toggleFormButtons() }
         spinnerTipoCalidad.addTextChangedListener { toggleFormButtons() }
         spinnerTipoFalla.addTextChangedListener { toggleFormButtons() }
+    }
+
+    private fun fetchFallaTypes() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val response = GoogleSheetsApi2.service.getTiposDeFallas()
+                if (response.isSuccessful) {
+                    val fallaTypes = response.body()?.data?.tiposDeFallas ?: emptyList()
+                    withContext(Dispatchers.Main) {
+                        val fallaAdapter = ArrayAdapter(this@ContinuarCargaActivity, android.R.layout.simple_dropdown_item_1line, fallaTypes)
+                        spinnerTipoFalla.setAdapter(fallaAdapter)
+                        Log.d(TAG, "Tipos de falla cargados: $fallaTypes")
+                    }
+                } else {
+                    Log.e(TAG, "Error al obtener tipos de falla: ${response.errorBody()?.string()}")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@ContinuarCargaActivity, "Error al cargar tipos de falla desde la nube.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error de red al obtener tipos de falla: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ContinuarCargaActivity, "Error de red: no se pudo cargar la lista de fallas.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     private fun toggleFormButtons() {
