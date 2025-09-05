@@ -8,7 +8,9 @@ import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.InspectionDao
@@ -29,12 +31,17 @@ class HomeActivity : AppCompatActivity() {
     // Inyecta tu DAO. Si no usas Hilt, inicialízalo manualmente en onCreate.
     private lateinit var inspectionDao: InspectionDao
 
+    private lateinit var inspectionViewModel: InspectionViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
         // Inicialización de la base de datos y el DAO
         inspectionDao = AppDatabase.getDatabase(this).inspectionDao()
+
+        val factory = InspectionViewModelFactory(application)
+        inspectionViewModel = ViewModelProvider(this, factory)[InspectionViewModel::class.java]
 
         // Inicialización de las vistas
         btnRegisterInspection = findViewById(R.id.btn_new_record)
@@ -80,8 +87,7 @@ class HomeActivity : AppCompatActivity() {
         }
 
         btnSync.setOnClickListener {
-            // Llama a la función de sincronización (debes implementarla)
-            // Por ejemplo: syncUnsyncedRecords()
+            inspectionViewModel.performSync()
             Log.d("HomeActivity", "Botón de sincronización presionado.")
         }
     }
