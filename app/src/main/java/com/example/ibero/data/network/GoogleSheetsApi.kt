@@ -49,6 +49,16 @@ data class TelaresData(
     val telares: List<Int>
 )
 
+data class HojasDeRutaReponse(
+    val status: String,
+    val message: String,
+    val data: HojasDeRutaData?
+)
+
+data class HojasDeRutaData(
+    val hojasDeRuta: List<String>
+)
+
 interface GoogleSheetsApiService {
 
     @POST("exec")
@@ -146,6 +156,12 @@ interface GoogleSheetsApiService {
     suspend fun getTelares(
         @Field("action") action: String = "getTelares"
     ): Response<TelaresResponse>
+
+    @FormUrlEncoded
+    @POST("exec")
+    suspend fun getHojasDeRutaExistentes(
+        @Field("action") action: String = "getHojasDeRutaExistentes"
+    ): Response<HojasDeRutaReponse>
 }
 
 // Objeto singleton para acceder al servicio de red

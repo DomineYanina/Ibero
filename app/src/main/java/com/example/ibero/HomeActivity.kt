@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.Articulo
+import com.example.ibero.data.HojaDeRuta
 import com.example.ibero.data.Tejeduria
 import com.example.ibero.data.Telar
 import com.example.ibero.data.TipoDeFalla
@@ -114,6 +115,21 @@ class HomeActivity : AppCompatActivity() {
                         database.telarDao().deleteAll()
                         database.telarDao().insertAll(it)
                         withContext(Dispatchers.Main) { Log.d("HomeActivity", "Telares sincronizados.") }
+                    }
+                }
+
+                val hojasDeRutaReponse = apiService.getHojasDeRutaExistentes()
+                if (hojasDeRutaReponse.isSuccessful) {
+                    // We get a List<String> from the API.
+                    val hojasDeRutaStrings = hojasDeRutaReponse.body()?.data?.hojasDeRuta
+
+                    // We convert the List<String> into a List<HojaDeRuta>
+                    val hojasDeRuta = hojasDeRutaStrings?.map { HojaDeRuta(nombre = it) }
+
+                    hojasDeRuta?.let {
+                        database.hojaDeRutaDao().deleteAll()
+                        database.hojaDeRutaDao().insertAll(it)
+                        withContext(Dispatchers.Main) { Log.d("HomeActivity", "Hojas de ruta sincronizadas.") }
                     }
                 }
 
