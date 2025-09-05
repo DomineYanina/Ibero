@@ -38,3 +38,25 @@ data class Inspection(
     val imagePaths: List<String> = emptyList(),
     val imageUrls: List<String> = emptyList(),
 )
+
+// Función de extensión para convertir un objeto Inspection a HistoricalInspection
+fun Inspection.toHistoricalInspection(): HistoricalInspection {
+    return HistoricalInspection(
+        uniqueId = this.uniqueId,
+        tipoCalidad = this.tipoCalidad,
+        tipoDeFalla = this.tipoDeFalla,
+        metrosDeTela = this.metrosDeTela,
+        hojaDeRuta = this.hojaDeRuta,
+        articulo = this.articulo,
+        color = this.color.toDouble(),
+        cadena = this.cadena.toDouble(),
+        anchoDeRollo = this.anchoDeRollo.toDouble(),
+        esmerilado = this.esmerilado,
+        ignifugo = this.ignifugo,
+        impermeable = this.impermeable,
+        otro = this.otro,
+        fecha = this.fecha.toString(),
+        usuario = this.usuario,
+        tejeduria = this.tejeduria
+    )
+}

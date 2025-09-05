@@ -4,9 +4,11 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.*
 import com.example.ibero.data.AppDatabase
+import com.example.ibero.data.HistoricalInspection
 import com.example.ibero.data.Inspection
 import com.example.ibero.data.network.AddInspectionResponse
 import com.example.ibero.data.network.GoogleSheetsApi2
+import com.example.ibero.data.toInspection
 import com.example.ibero.repository.InspectionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -17,6 +19,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.Date
+
+// En InspectionViewModel.kt
+
+import com.example.ibero.data.toInspection
 import kotlinx.coroutines.delay
 import java.util.UUID // Importación necesaria
 
@@ -322,6 +328,17 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         repository.update(inspection)
         // 2. Sincroniza y retorna el resultado
         return syncOneInspection(inspection)
+    }
+
+    fun loadHistoricalInspections(records: List<HistoricalInspection>) {
+        // Clear the current list to avoid duplicates
+        _currentSessionInspections.value = mutableListOf()
+
+        // Convert the historical records to Inspection objects and add them to the session list
+        val inspections = records.map { it.toInspection() }
+
+        // Add all converted inspections to the internal list
+        _currentSessionInspections.value = inspections.toMutableList()
     }
 
     // NUEVO MÉTODO: Sincroniza un solo registro

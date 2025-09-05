@@ -151,7 +151,7 @@ interface GoogleSheetsApiService {
 // Objeto singleton para acceder al servicio de red
 object GoogleSheetsApi2 {
     // Es mejor usar un nombre más genérico si centralizarás todas las llamadas.
-    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbwcLdaiU99eWa3SqXrViRX8uVablMIv9agjfuevBxM4kmTn8VP9It_vKhLuCIatm7BDrg/"
+    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbyfXX-m0TDrqafcLRM90ZUl_bWZpiY92rCNyt8QVmMzvcZ_AIFmTah9r78eTypObg1RuA/"
 
     val service: GoogleSheetsApiService by lazy {
         Retrofit.Builder()

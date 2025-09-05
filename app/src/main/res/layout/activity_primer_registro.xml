@@ -7,11 +7,11 @@
         android:background="#F5F5F5"
         tools:context=".PrimerRegistroActivity">
 
-    <!-- ScrollView para el contenido principal -->
     <ScrollView
+            android:id="@+id/main_scroll_view"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            app:layout_constraintBottom_toTopOf="@+id/btn_cancelar_primer_registro"
+            app:layout_constraintBottom_toTopOf="@+id/footer_buttons_container"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
@@ -43,7 +43,6 @@
                     android:textSize="18sp"
                     android:textStyle="italic" />
 
-            <!-- Par de campos: Fecha y Hoja de Ruta -->
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -84,7 +83,6 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <!-- Par de campos: Tejeduria y Telar -->
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -123,7 +121,6 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <!-- Par de campos: Tintoreria y Artículo -->
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -162,7 +159,6 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <!-- Par de campos: Color y Rollo de Urdido -->
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -201,7 +197,6 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <!-- Par de campos: Orden y Cadena -->
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -240,7 +235,6 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <!-- Par de campos: Ancho de Rollo y Esmerilado -->
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -279,7 +273,6 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <!-- Par de campos: Ignífugo y Impermeable -->
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -318,7 +311,6 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <!-- Campo individual: Otro (Opcional) -->
             <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/layout_otro"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -333,22 +325,43 @@
                         android:layout_height="wrap_content"
                         android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- Botón Siguiente -->
-            <Button
-                    android:id="@+id/btn_next"
-                    style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:drawableEnd="@drawable/ic_arrow_forward_white"
-                    android:drawablePadding="8dp"
-                    android:padding="14dp"
-                    android:text="Siguiente" />
         </LinearLayout>
     </ScrollView>
 
-    <!-- Barra de progreso flotante -->
+    <LinearLayout
+            android:id="@+id/footer_buttons_container"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="16dp"
+            android:background="#FFFFFF"
+            android:elevation="8dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+        <Button
+                android:id="@+id/btn_cancelar_primer_registro"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:backgroundTint="#FA0000"
+                android:text="Cancelar" />
+
+        <Button
+                android:id="@+id/btn_next"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:drawableEnd="@drawable/ic_arrow_forward_white"
+                android:drawablePadding="8dp"
+                android:text="Siguiente" />
+    </LinearLayout>
+
     <ProgressBar
             android:id="@+id/progress_bar_loading"
             android:layout_width="wrap_content"
@@ -359,19 +372,5 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
-
-    <!-- Nuevo botón de "Cancelar" anclado en la parte inferior -->
-    <Button
-            android:id="@+id/btn_cancelar_primer_registro"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_margin="16dp"
-            android:backgroundTint="#FA0000"
-            android:padding="16dp"
-            android:text="Cancelar"
-            android:textColor="@android:color/white"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -22,6 +22,7 @@ import com.example.ibero.data.HistoricalInspection
 import com.example.ibero.data.Inspection
 import com.example.ibero.data.toInspection
 import com.example.ibero.data.network.GoogleSheetsApi2
+import com.example.ibero.data.toHistoricalInspection
 import com.example.ibero.ui.InspectionHistoryAdapter
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputLayout
@@ -77,13 +78,32 @@ class ContinuarCargaActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this, factory)[InspectionViewModel::class.java]
         setupListeners()
         observeViewModel()
-        fetchFallaTypes() // Nueva llamada para cargar los tipos de fallas
+        fetchFallaTypes()
 
         btnIncorporar.isVisible = false
         btnGuardarRegistro.isVisible = false
         formAndRecordsContainer.visibility = View.GONE
 
         setupFieldWatchers()
+
+        // Este observador es clave para que la lista se actualice automáticamente
+        viewModel.currentSessionInspections.observe(this) { inspections ->
+            Log.d(TAG, "Observando cambios en la lista. Se recibieron ${inspections.size} registros.")
+
+            // Convierte la lista de Inspection a HistoricalInspection antes de pasársela al adaptador
+            val historicalInspections = inspections.map { it.toHistoricalInspection() }
+
+            historyAdapter.updateList(historicalInspections.toMutableList())
+            if (inspections.isNotEmpty()) {
+                hasRegisteredAnItem = true
+                btnCancelar.text = "Ir a Inicio"
+                toggleFormButtons()
+            } else {
+                hasRegisteredAnItem = false
+                btnCancelar.text = "Cancelar"
+                toggleFormButtons()
+            }
+        }
     }
 
     private fun initViews() {
@@ -163,9 +183,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
                 spinnerTipoFalla.setText("", false)
             }
         }
-
-        // Se elimina la lista hardcodeada de fallas. Ahora se cargará dinámicamente.
-        // La configuración del adapter se mueve a la nueva función fetchFallaTypes().
 
         btnIncorporar.setOnClickListener {
             Log.d(TAG, "Botón 'Incorporar' presionado. editingHistoricalInspection es nulo? ${editingHistoricalInspection == null}")
@@ -289,6 +306,10 @@ class ContinuarCargaActivity : AppCompatActivity() {
                         Log.d(TAG, "Registros encontrados: ${records.size}")
                         val firstRecord = records.first()
 
+                        // Limpia la sesión actual y carga los registros históricos en el ViewModel
+                        viewModel.clearCurrentSessionList()
+                        viewModel.loadHistoricalInspections(records)
+
                         viewModel.initSessionData(
                             usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido",
                             hojaDeRuta = firstRecord.hojaDeRuta,
@@ -312,12 +333,13 @@ class ContinuarCargaActivity : AppCompatActivity() {
                         Log.d(TAG, "uniqueId del primer registro: ${firstRecord.uniqueId}")
                         textExistingRecordsTitle.text = "Registros para la Hoja de Ruta: ${firstRecord.hojaDeRuta} - Artículo: ${firstRecord.articulo}"
                         formAndRecordsContainer.visibility = View.VISIBLE
-                        historyAdapter.updateList(records)
+                        // Ya no se llama al adaptador directamente aquí, el observador se encargará de esto
                         Toast.makeText(this@ContinuarCargaActivity, "Hoja de Ruta encontrada. Historial cargado.", Toast.LENGTH_LONG).show()
                         toggleFormButtons()
                     } else {
                         Toast.makeText(this@ContinuarCargaActivity, "No se encontraron registros para la Hoja de Ruta. Por favor, revisa el número.", Toast.LENGTH_LONG).show()
                         formAndRecordsContainer.visibility = View.GONE
+                        viewModel.clearCurrentSessionList()
                     }
                 }
             } catch (e: Exception) {
@@ -442,7 +464,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
         editMetrosDeTela.setText(inspection.metrosDeTela.toString())
 
         btnIncorporar.text = "Actualizar"
-        //btnGuardarRegistro.text = "Actualizar y Finalizar"
         Toast.makeText(this, "Modifica los campos y toca Actualizar", Toast.LENGTH_SHORT).show()
 
         toggleFormButtons()

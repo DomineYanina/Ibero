@@ -343,29 +343,25 @@ class SegundoRegistroActivity : AppCompatActivity() {
     private fun toggleButtonsBasedOnInput() {
         if (hasRegisteredAnItem) {
             btnVolver.isVisible = false
-            btnCancelar.isVisible = true
-            btnIncorporar.isVisible = true
-            btnGuardarRegistro.isVisible = true
-        } else {
-            val hayInput = spinnerTipoCalidad.text.isNotBlank() ||
-                    spinnerTipoDeFalla.text.isNotBlank() ||
-                    editMetrosDeTela.text.isNotBlank()
+        }
+        val hayInput = spinnerTipoCalidad.text.isNotBlank() ||
+                spinnerTipoDeFalla.text.isNotBlank() ||
+                editMetrosDeTela.text.isNotBlank()
 
-            if (hayInput) {
-                btnCancelar.isVisible = false
-                btnVolver.isVisible = false
-                btnIncorporar.isVisible = true
-                if(editingInspection!=null){
-                    btnGuardarRegistro.isVisible=false
-                } else{
-                    btnGuardarRegistro.isVisible=true
-                }
-            } else {
-                btnCancelar.isVisible = true
-                btnVolver.isVisible = true
-                btnIncorporar.isVisible = false
-                btnGuardarRegistro.isVisible = false
+        if (hayInput) {
+            btnCancelar.isVisible = false
+            btnVolver.isVisible = false
+            btnIncorporar.isVisible = true
+            if(editingInspection!=null){
+                btnGuardarRegistro.isVisible=false
+            } else{
+                btnGuardarRegistro.isVisible=true
             }
+        } else {
+            btnCancelar.isVisible = true
+            btnVolver.isVisible = true
+            btnIncorporar.isVisible = false
+            btnGuardarRegistro.isVisible = false
         }
     }
 
