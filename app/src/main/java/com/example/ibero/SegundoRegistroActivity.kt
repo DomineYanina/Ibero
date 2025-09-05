@@ -157,8 +157,14 @@ class SegundoRegistroActivity : AppCompatActivity() {
             currentSessionInspectionAdapter.updateList(inspections)
             if (inspections.isNotEmpty()) {
                 hasRegisteredAnItem = true
+                // El botón Volver se oculta aquí.
                 btnVolver.isVisible = false
                 btnCancelar.text = "Ir a Inicio"
+            } else {
+                hasRegisteredAnItem = false
+                // El botón Volver se muestra si la lista está vacía y no hay un registro nuevo
+                btnVolver.isVisible = true
+                btnCancelar.text = "Cancelar"
             }
         }
     }
@@ -341,9 +347,6 @@ class SegundoRegistroActivity : AppCompatActivity() {
     }
 
     private fun toggleButtonsBasedOnInput() {
-        if (hasRegisteredAnItem) {
-            btnVolver.isVisible = false
-        }
         val hayInput = spinnerTipoCalidad.text.isNotBlank() ||
                 spinnerTipoDeFalla.text.isNotBlank() ||
                 editMetrosDeTela.text.isNotBlank()
@@ -359,7 +362,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
             }
         } else {
             btnCancelar.isVisible = true
-            btnVolver.isVisible = true
+            btnVolver.isVisible = !hasRegisteredAnItem // <--- Se evalúa la visibilidad del botón Volver aquí
             btnIncorporar.isVisible = false
             btnGuardarRegistro.isVisible = false
         }
