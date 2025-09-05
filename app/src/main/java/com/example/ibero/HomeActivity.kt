@@ -27,6 +27,7 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var apiService: GoogleSheetsApiService
     private lateinit var database: AppDatabase
     private lateinit var textWelcome: TextView
+    private lateinit var loggedInUser: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,7 +42,7 @@ class HomeActivity : AppCompatActivity() {
         textWelcome = findViewById(R.id.text_welcome)
 
         // Obtiene el nombre de usuario del Intent y actualiza el TextView
-        val loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
+        loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
         textWelcome.text = "Bienvenido, $loggedInUser"
 
         // Se puede sincronizar al iniciar la actividad
@@ -49,16 +50,19 @@ class HomeActivity : AppCompatActivity() {
 
         btnRegisterInspection.setOnClickListener {
             val intent = Intent(this, PrimerRegistroActivity::class.java)
+            intent.putExtra("LOGGED_IN_USER", loggedInUser) // Añade el nombre de usuario al Intent
             startActivity(intent)
         }
 
         btnUpdateTonalidad.setOnClickListener {
             val intent = Intent(this, TonalidadesActivity::class.java)
+            intent.putExtra("LOGGED_IN_USER", loggedInUser) // Añade el nombre de usuario al Intent
             startActivity(intent)
         }
 
         btnViewInspections.setOnClickListener {
             val intent = Intent(this, ContinuarCargaActivity::class.java)
+            intent.putExtra("LOGGED_IN_USER", loggedInUser) // Añade el nombre de usuario al Intent
             startActivity(intent)
         }
     }
