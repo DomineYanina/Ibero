@@ -20,6 +20,29 @@
             android:textColor="#333333"
             android:layout_marginBottom="48dp"/>
 
+    <TextView
+            android:id="@+id/text_sync_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:text="Hay registros pendientes de sincronizar."
+            android:textColor="#D32F2F"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone" />
+
+    <Button
+            android:id="@+id/btn_sync"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Sincronizar ahora"
+            android:backgroundTint="#00796B"
+            android:textColor="@android:color/white"
+            android:padding="16dp"
+            android:textSize="18sp"
+            android:layout_marginBottom="24dp"
+            android:visibility="gone" />
+
     <Button
             android:id="@+id/btn_new_record"
             android:layout_width="match_parent"
@@ -33,8 +56,6 @@
             android:drawableStart="@drawable/ic_add_white"
             android:drawablePadding="8dp"
             android:layout_marginBottom="16dp"/>
-
-    <!-- Nuevo botón para continuar una carga existente -->
 
     <Button
             android:id="@+id/btn_continuar_carga"

@@ -33,4 +33,7 @@ interface InspectionDao {
     // Elimina todas las inspecciones sincronizadas (opcional, para limpiar la DB local)
     @Query("DELETE FROM inspections WHERE isSynced = 1")
     suspend fun deleteSyncedInspections()
+
+    @Query("SELECT COUNT(*) FROM inspections WHERE isSynced = 0")
+    suspend fun getUnsyncedCount(): Int
 }
