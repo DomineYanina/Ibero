@@ -16,4 +16,7 @@ interface HojaDeRutaDao {
 
     @Query("DELETE FROM hojas_de_ruta")
     suspend fun deleteAll()
+
+    @Query("SELECT EXISTS(SELECT 1 FROM hojas_de_ruta WHERE nombre = :nombre)")
+    suspend fun exists(nombre: String): Boolean
 }

@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.ibero.data.AppDatabase
+import com.example.ibero.data.HojaDeRutaDao
 import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.data.network.GoogleSheetsApiService
 import com.google.android.material.textfield.TextInputLayout
@@ -58,6 +59,8 @@ class PrimerRegistroActivity : AppCompatActivity() {
     private lateinit var apiService: GoogleSheetsApiService
     private lateinit var database: AppDatabase
 
+    private lateinit var hojaDeRutaDao: HojaDeRutaDao
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_primer_registro)
@@ -66,6 +69,7 @@ class PrimerRegistroActivity : AppCompatActivity() {
 
         apiService = GoogleSheetsApi2.service
         database = AppDatabase.getDatabase(this)
+        hojaDeRutaDao = database.hojaDeRutaDao()
 
         initViews()
         setupSpinners()
@@ -198,27 +202,33 @@ class PrimerRegistroActivity : AppCompatActivity() {
 
     private fun checkHojaDeRutaExistence() {
         val hojaDeRuta = editHojaDeRuta.text.toString().trim()
+
+        // Manejar el caso de campo vacío antes de la verificación
+        if (hojaDeRuta.isEmpty()) {
+            Toast.makeText(this, "El campo no puede estar vacío.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         lifecycleScope.launch(Dispatchers.IO) {
             withContext(Dispatchers.Main) { setLoadingState(true) }
             try {
-                val response = apiService.checkHojaRutaExistence(hojaDeRuta = hojaDeRuta)
+                // Reemplazamos la llamada a la API por la consulta al DAO
+                val existsInDb = hojaDeRutaDao.exists(hojaDeRuta)
+
                 withContext(Dispatchers.Main) {
-                    if (response.status == "SUCCESS") {
-                        if (response.data.exists) {
-                            Toast.makeText(this@PrimerRegistroActivity, "Error: La hoja de ruta ya existe.", Toast.LENGTH_LONG).show()
-                            editHojaDeRuta.text.clear()
-                            editHojaDeRuta.requestFocus()
-                        } else {
-                            navigateToNextActivity()
-                        }
+                    if (existsInDb) {
+                        Toast.makeText(this@PrimerRegistroActivity, "Error: La hoja de ruta ya existe.", Toast.LENGTH_LONG).show()
+                        editHojaDeRuta.text.clear()
+                        editHojaDeRuta.requestFocus()
                     } else {
-                        Toast.makeText(this@PrimerRegistroActivity, "Error en la verificación: ${response.message}", Toast.LENGTH_LONG).show()
+                        navigateToNextActivity()
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@PrimerRegistroActivity, "Error de conexión. Intente nuevamente.", Toast.LENGTH_LONG).show()
-                    Log.e("PrimerRegistroActivity", "Error al verificar hoja de ruta", e)
+                    // Manejo de errores de la base de datos
+                    Toast.makeText(this@PrimerRegistroActivity, "Error al verificar la hoja de ruta.", Toast.LENGTH_LONG).show()
+                    Log.e("PrimerRegistroActivity", "Error al verificar hoja de ruta en la base de datos", e)
                 }
             } finally {
                 withContext(Dispatchers.Main) { setLoadingState(false) }

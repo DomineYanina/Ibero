@@ -1,5 +1,6 @@
 package com.example.ibero.data.network
 
+import okhttp3.OkHttpClient
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -7,6 +8,7 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
+import java.util.concurrent.TimeUnit
 
 data class ArticulosResponse(
     val status: String,
@@ -166,13 +168,19 @@ interface GoogleSheetsApiService {
 
 // Objeto singleton para acceder al servicio de red
 object GoogleSheetsApi2 {
-    // Es mejor usar un nombre más genérico si centralizarás todas las llamadas.
-    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbyfXX-m0TDrqafcLRM90ZUl_bWZpiY92rCNyt8QVmMzvcZ_AIFmTah9r78eTypObg1RuA/"
+    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbz3RazFwI0EMLzy66e3EbaEHDCG65MiCUJYEMebmpgxuG4_zUGRl9JLuPCXGJ5uVDYbRQ/"
 
     val service: GoogleSheetsApiService by lazy {
+
+        val okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS) // Aumenta el tiempo de espera de conexión a 30 segundos
+            .readTimeout(60, TimeUnit.SECONDS) // Aumenta el tiempo de espera de lectura a 60 segundos
+            .build()
+
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
+            .client(okHttpClient) // Asigna el cliente OkHttpClient personalizado
             .build()
             .create(GoogleSheetsApiService::class.java)
     }
