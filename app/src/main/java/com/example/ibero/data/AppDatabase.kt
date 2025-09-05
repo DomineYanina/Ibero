@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [Inspection::class, Articulo::class, TipoDeFalla::class, Tejeduria::class, Telar::class, HojaDeRuta::class],
-    version = 4, // **IMPORTANTE: Incrementa la versión**
+    version = 5, // **IMPORTANTE: Incrementa la versión**
     exportSchema = false
 )
 @TypeConverters(Converters::class)
