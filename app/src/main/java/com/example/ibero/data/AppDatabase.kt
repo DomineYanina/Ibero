@@ -6,11 +6,19 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [Inspection::class], version = 3, exportSchema = false)
+@Database(
+    entities = [Inspection::class, Articulo::class, TipoDeFalla::class, Tejeduria::class, Telar::class],
+    version = 4, // **IMPORTANTE: Incrementa la versión**
+    exportSchema = false
+)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun inspectionDao(): InspectionDao
+    abstract fun articuloDao(): ArticuloDao
+    abstract fun tipoDeFallaDao(): TipoDeFallaDao
+    abstract fun tejeduriaDao(): TejeduriaDao
+    abstract fun telarDao(): TelarDao
 
     companion object {
         @Volatile
@@ -23,8 +31,6 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "inspection_database"
                 )
-                    // Esto permite a Room destruir y recrear la base de datos si el esquema cambia.
-                    // Es ideal para el desarrollo, pero no para producción.
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

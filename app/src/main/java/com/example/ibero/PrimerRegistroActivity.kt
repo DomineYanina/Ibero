@@ -13,11 +13,13 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.data.network.GoogleSheetsApiService
 import com.google.android.material.textfield.TextInputLayout
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -52,7 +54,9 @@ class PrimerRegistroActivity : AppCompatActivity() {
     private lateinit var progressBarTejeduria: ProgressBar
     private lateinit var progressBarTelar: ProgressBar
 
+    // Se mantiene el servicio de API para la verificación de la hoja de ruta
     private lateinit var apiService: GoogleSheetsApiService
+    private lateinit var database: AppDatabase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,6 +65,7 @@ class PrimerRegistroActivity : AppCompatActivity() {
         loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
 
         apiService = GoogleSheetsApi2.service
+        database = AppDatabase.getDatabase(this)
 
         initViews()
         setupSpinners()
@@ -103,39 +108,24 @@ class PrimerRegistroActivity : AppCompatActivity() {
     }
 
     private fun setupSpinners() {
-        fetchTejedurias()
-        fetchTelares()
-        fetchArticulos()
+        fetchTejeduriasFromDb()
+        fetchTelaresFromDb()
+        fetchArticulosFromDb()
     }
 
-    private fun fetchTejedurias() {
+    private fun fetchTejeduriasFromDb() {
         progressBarTejeduria.visibility = View.VISIBLE
         spinnerTejeduria.isEnabled = false
 
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val response = apiService.getTejedurias()
+        lifecycleScope.launch(Dispatchers.IO) {
+            database.tejeduriaDao().getAllTejedurias().collect { tejedurias ->
                 withContext(Dispatchers.Main) {
-                    if (response.isSuccessful && response.body()?.status == "SUCCESS") {
-                        val tejedurias = response.body()?.data?.tejedurias ?: emptyList()
-                        val tejeduriaAdapter = ArrayAdapter(
-                            this@PrimerRegistroActivity,
-                            android.R.layout.simple_dropdown_item_1line,
-                            tejedurias
-                        )
-                        spinnerTejeduria.setAdapter(tejeduriaAdapter)
-                    } else {
-                        Log.e("PrimerRegistroActivity", "Error al cargar tejedurias: ${response.body()?.message ?: "Mensaje desconocido"}")
-                        Toast.makeText(this@PrimerRegistroActivity, "Error al cargar tejedurias.", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Log.e("PrimerRegistroActivity", "Error de red al obtener tejedurias: ${e.message}")
-                    Toast.makeText(this@PrimerRegistroActivity, "Error de conexión. No se pudieron cargar las tejedurias.", Toast.LENGTH_LONG).show()
-                }
-            } finally {
-                withContext(Dispatchers.Main) {
+                    val tejeduriaAdapter = ArrayAdapter(
+                        this@PrimerRegistroActivity,
+                        android.R.layout.simple_dropdown_item_1line,
+                        tejedurias
+                    )
+                    spinnerTejeduria.setAdapter(tejeduriaAdapter)
                     progressBarTejeduria.visibility = View.GONE
                     spinnerTejeduria.isEnabled = true
                 }
@@ -143,34 +133,20 @@ class PrimerRegistroActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchTelares() {
+    private fun fetchTelaresFromDb() {
         progressBarTelar.visibility = View.VISIBLE
         spinnerTelar.isEnabled = false
 
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val response = apiService.getTelares()
+        lifecycleScope.launch(Dispatchers.IO) {
+            database.telarDao().getAllTelares().collect { telares ->
                 withContext(Dispatchers.Main) {
-                    if (response.isSuccessful && response.body()?.status == "SUCCESS") {
-                        val telares = response.body()?.data?.telares?.map { it.toString() } ?: emptyList()
-                        val telarAdapter = ArrayAdapter(
-                            this@PrimerRegistroActivity,
-                            android.R.layout.simple_dropdown_item_1line,
-                            telares
-                        )
-                        spinnerTelar.setAdapter(telarAdapter)
-                    } else {
-                        Log.e("PrimerRegistroActivity", "Error al cargar telares: ${response.body()?.message ?: "Mensaje desconocido"}")
-                        Toast.makeText(this@PrimerRegistroActivity, "Error al cargar telares.", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Log.e("PrimerRegistroActivity", "Error de red al obtener telares: ${e.message}")
-                    Toast.makeText(this@PrimerRegistroActivity, "Error de conexión. No se pudieron cargar los telares.", Toast.LENGTH_LONG).show()
-                }
-            } finally {
-                withContext(Dispatchers.Main) {
+                    val telarStrings = telares.map { it.toString() }
+                    val telarAdapter = ArrayAdapter(
+                        this@PrimerRegistroActivity,
+                        android.R.layout.simple_dropdown_item_1line,
+                        telarStrings
+                    )
+                    spinnerTelar.setAdapter(telarAdapter)
                     progressBarTelar.visibility = View.GONE
                     spinnerTelar.isEnabled = true
                 }
@@ -178,35 +154,19 @@ class PrimerRegistroActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchArticulos() {
+    private fun fetchArticulosFromDb() {
         progressBar.visibility = View.VISIBLE
         spinnerArticulo.isEnabled = false
 
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val response = apiService.getArticulos()
-
+        lifecycleScope.launch(Dispatchers.IO) {
+            database.articuloDao().getAllArticulos().collect { articulos ->
                 withContext(Dispatchers.Main) {
-                    if (response.isSuccessful && response.body()?.status == "SUCCESS") {
-                        val articulos = response.body()?.data?.articulos ?: emptyList()
-                        val articuloAdapter = ArrayAdapter(
-                            this@PrimerRegistroActivity,
-                            android.R.layout.simple_dropdown_item_1line,
-                            articulos
-                        )
-                        spinnerArticulo.setAdapter(articuloAdapter)
-                    } else {
-                        Log.e("PrimerRegistroActivity", "Error al cargar artículos: ${response.body()?.message ?: "Mensaje desconocido"}")
-                        Toast.makeText(this@PrimerRegistroActivity, "Error al cargar artículos.", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Log.e("PrimerRegistroActivity", "Error de red al obtener artículos: ${e.message}")
-                    Toast.makeText(this@PrimerRegistroActivity, "Error de conexión. No se pudieron cargar los artículos.", Toast.LENGTH_LONG).show()
-                }
-            } finally {
-                withContext(Dispatchers.Main) {
+                    val articuloAdapter = ArrayAdapter(
+                        this@PrimerRegistroActivity,
+                        android.R.layout.simple_dropdown_item_1line,
+                        articulos
+                    )
+                    spinnerArticulo.setAdapter(articuloAdapter)
                     progressBar.visibility = View.GONE
                     spinnerArticulo.isEnabled = true
                 }
@@ -238,10 +198,10 @@ class PrimerRegistroActivity : AppCompatActivity() {
 
     private fun checkHojaDeRutaExistence() {
         val hojaDeRuta = editHojaDeRuta.text.toString().trim()
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             withContext(Dispatchers.Main) { setLoadingState(true) }
             try {
-                val response = GoogleSheetsApi2.service.checkHojaRutaExistence(hojaDeRuta = hojaDeRuta)
+                val response = apiService.checkHojaRutaExistence(hojaDeRuta = hojaDeRuta)
                 withContext(Dispatchers.Main) {
                     if (response.status == "SUCCESS") {
                         if (response.data.exists) {

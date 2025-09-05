@@ -10,8 +10,6 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.ibero.HomeActivity
-import com.example.ibero.R
 import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.data.network.GoogleSheetsApiService
 import kotlinx.coroutines.CoroutineScope

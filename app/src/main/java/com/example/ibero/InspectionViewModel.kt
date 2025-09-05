@@ -20,12 +20,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.Date
 
-// En InspectionViewModel.kt
-
-import com.example.ibero.data.toInspection
-import kotlinx.coroutines.delay
-import java.util.UUID // Importación necesaria
-
 class InspectionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: InspectionRepository

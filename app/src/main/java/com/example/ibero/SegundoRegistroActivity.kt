@@ -21,15 +21,16 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ibero.InspectionViewModel
+import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.Inspection
 import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.data.network.GoogleSheetsApiService
 import com.example.ibero.ui.CurrentSessionInspectionAdapter
 import com.google.android.material.textfield.TextInputLayout
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.collect
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,6 +40,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
     private lateinit var viewModel: InspectionViewModel
     private lateinit var apiService: GoogleSheetsApiService
+    private lateinit var database: AppDatabase
 
     private lateinit var spinnerTipoCalidad: AutoCompleteTextView
     private lateinit var layoutTipoDeFalla: TextInputLayout
@@ -93,6 +95,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
         apiService = GoogleSheetsApi2.service
+        database = AppDatabase.getDatabase(this)
 
         usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
         fecha = intent.getStringExtra("FECHA") ?: ""
@@ -195,7 +198,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         val tipoCalidadAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, tipoCalidadOptions)
         spinnerTipoCalidad.setAdapter(tipoCalidadAdapter)
 
-        fetchTiposDeFalla()
+        fetchTiposDeFallaFromDb()
 
         spinnerTipoCalidad.setOnItemClickListener { _, _, _, _ ->
             val selectedQuality = spinnerTipoCalidad.text.toString()
@@ -208,38 +211,21 @@ class SegundoRegistroActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchTiposDeFalla() {
+    private fun fetchTiposDeFallaFromDb() {
         progressBarFalla.visibility = View.VISIBLE
         spinnerTipoDeFalla.isEnabled = false
 
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val response = apiService.getTiposDeFallas()
-
+        lifecycleScope.launch(Dispatchers.IO) {
+            database.tipoDeFallaDao().getAllTiposDeFallas().collect { tiposDeFalla ->
                 withContext(Dispatchers.Main) {
-                    if (response.isSuccessful && response.body()?.status == "SUCCESS") {
-                        val tiposDeFallas = response.body()?.data?.tiposDeFallas ?: emptyList()
-                        val tipoDeFallaAdapter = ArrayAdapter(
-                            this@SegundoRegistroActivity,
-                            android.R.layout.simple_dropdown_item_1line,
-                            tiposDeFallas
-                        )
-                        spinnerTipoDeFalla.setAdapter(tipoDeFallaAdapter)
-                    } else {
-                        Log.e("SegundoRegistroActivity", "Error al cargar tipos de falla: ${response.body()?.message ?: "Mensaje desconocido"}")
-                        Toast.makeText(this@SegundoRegistroActivity, "Error al cargar tipos de falla.", Toast.LENGTH_SHORT).show()
-                        val fallbackList = listOf("Error de carga")
-                        val fallbackAdapter = ArrayAdapter(this@SegundoRegistroActivity, android.R.layout.simple_dropdown_item_1line, fallbackList)
-                        spinnerTipoDeFalla.setAdapter(fallbackAdapter)
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Log.e("SegundoRegistroActivity", "Error de red al obtener tipos de falla: ${e.message}")
-                    Toast.makeText(this@SegundoRegistroActivity, "Error de conexión. No se pudieron cargar los tipos de falla.", Toast.LENGTH_LONG).show()
-                }
-            } finally {
-                withContext(Dispatchers.Main) {
+                    // El error se encontraba aquí. La base de datos ya devuelve una lista de strings, no de objetos con una propiedad 'nombre'.
+                    val fallas = tiposDeFalla
+                    val tipoDeFallaAdapter = ArrayAdapter(
+                        this@SegundoRegistroActivity,
+                        android.R.layout.simple_dropdown_item_1line,
+                        fallas
+                    )
+                    spinnerTipoDeFalla.setAdapter(tipoDeFallaAdapter)
                     progressBarFalla.visibility = View.GONE
                     spinnerTipoDeFalla.isEnabled = true
                 }
