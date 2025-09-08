@@ -8,7 +8,6 @@ import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -17,6 +16,9 @@ import com.example.ibero.data.InspectionDao
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.graphics.Color
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 
 class HomeActivity : AppCompatActivity() {
 
@@ -88,41 +90,46 @@ class HomeActivity : AppCompatActivity() {
 
         btnSync.setOnClickListener {
             inspectionViewModel.performSync()
-            Log.d("HomeActivity", "Botón de sincronización presionado.")
+            textSyncStatus.text = "Sin registros a sincronizar."
+            btnSync.text = "Sincronizar"
+            btnSync.isEnabled = false
+            btnSync.setBackgroundColor(Color.GREEN)
         }
     }
 
     private fun checkSyncStatus() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
+                textSyncStatus.visibility =View.VISIBLE
+                btnSync.visibility = View.VISIBLE
                 // Obtener el conteo de registros no sincronizados
                 val unsyncedCount = inspectionDao.getUnsyncedCount()
 
                 withContext(Dispatchers.Main) {
                     if (unsyncedCount > 0) {
-                        textSyncStatus.visibility = View.VISIBLE
                         textSyncStatus.text = "Tienes $unsyncedCount registros sin sincronizar."
+                        btnSync.setBackgroundColor(Color.RED)
                         if (isNetworkAvailable(this@HomeActivity)) {
                             // Si hay conexión, muestra el botón de sincronizar
-                            btnSync.visibility = View.VISIBLE
-                            btnSync.isEnabled = true
+                            btnSync.setText("Sincronizar")
                         } else {
                             // Si no hay conexión, muestra un mensaje de error
-                            btnSync.visibility = View.GONE
-                            textSyncStatus.text = "No hay conexión a Internet. Registros pendientes de sincronizar."
+                            btnSync.setText("Sin conexión a internet")
                         }
                     } else {
                         // Oculta los elementos si no hay nada que sincronizar
-                        textSyncStatus.visibility = View.GONE
-                        btnSync.visibility = View.GONE
+                        textSyncStatus.text = "Tienes $unsyncedCount registros sin sincronizar."
+                        btnSync.setBackgroundColor(Color.GREEN)
+                        btnSync.setText("Nada por sincronizar")
+                        btnSync.isEnabled = false
                     }
                 }
             } catch (e: Exception) {
                 Log.e("HomeActivity", "Error al verificar el estado de sincronización", e)
                 withContext(Dispatchers.Main) {
                     // Oculta los elementos en caso de error
-                    textSyncStatus.visibility = View.GONE
-                    btnSync.visibility = View.GONE
+                    btnSync.setBackgroundColor(Color.RED)
+                    btnSync.visibility = View.VISIBLE
                 }
             }
         }
