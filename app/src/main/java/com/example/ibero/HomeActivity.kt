@@ -107,7 +107,7 @@ class HomeActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     if (unsyncedCount > 0) {
-                        textSyncStatus.text = "Tienes $unsyncedCount registros sin sincronizar."
+                        textSyncStatus.text = "¡Cuidado! Hay $unsyncedCount registros pendientes. No cierres la app sin sincronizar."
                         btnSync.setBackgroundColor(Color.RED)
                         if (isNetworkAvailable(this@HomeActivity)) {
                             // Si hay conexión, muestra el botón de sincronizar
@@ -118,7 +118,7 @@ class HomeActivity : AppCompatActivity() {
                         }
                     } else {
                         // Oculta los elementos si no hay nada que sincronizar
-                        textSyncStatus.text = "Tienes $unsyncedCount registros sin sincronizar."
+                        textSyncStatus.text = "Sin registros por sincronizar."
                         btnSync.setBackgroundColor(Color.GREEN)
                         btnSync.setText("Nada por sincronizar")
                         btnSync.isEnabled = false

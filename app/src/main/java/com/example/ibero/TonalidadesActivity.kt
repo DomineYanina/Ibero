@@ -1,5 +1,6 @@
 package com.example.ibero
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -20,8 +21,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.content.Intent
+import android.net.ConnectivityManager
+import androidx.lifecycle.ViewModelProvider
+import com.example.ibero.data.Tonalidad
 
 class TonalidadesActivity : AppCompatActivity() {
+
+    private lateinit var viewModel: InspectionViewModel
 
     private lateinit var editHojaRuta: TextInputEditText // Usamos el tipo correcto
     private lateinit var btnBuscar: Button
@@ -42,9 +48,20 @@ class TonalidadesActivity : AppCompatActivity() {
         // Obtener el nombre de usuario del Intent
         loggedInUser = intent.getStringExtra("LOGGED_IN_USER")
 
+        val factory = InspectionViewModelFactory(application) // Usa el mismo factory
+        viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
+
         initViews()
         setupListeners()
         setupRecyclerView()
+
+        // Observa los mensajes de sincronización del ViewModel
+        viewModel.syncMessage.observe(this) { message ->
+            message?.let {
+                Toast.makeText(this, it, Toast.LENGTH_LONG).show()
+                viewModel.clearSyncMessage()
+            }
+        }
     }
 
     private fun initViews() {
@@ -98,15 +115,16 @@ class TonalidadesActivity : AppCompatActivity() {
     private fun buscarRegistrosPorHojaRuta(hojaRuta: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // CAMBIO: La respuesta ahora contiene 'uniqueId' en lugar de 'rowNumber'
                 val response = GoogleSheetsApi2.service.findTonalidades(hojaDeRuta = hojaRuta)
 
                 withContext(Dispatchers.Main) {
                     if (response.status == "success" && !response.data.isNullOrEmpty()) {
-                        // ... (mapeo de datos, sin cambios aquí)
                         val uiItems = response.data!!.map { dataItem ->
                             val tonalidadPrevia = dataItem.valorColumnaV
+                            // CAMBIO: Usar dataItem.uniqueId para el 'uniqueId'
                             TonalidadItem(
-                                uniqueId = dataItem.rowNumber.toString(),
+                                uniqueId = dataItem.uniqueId ?: "",
                                 valorHojaDeRutaId = dataItem.valorColumnaA ?: "",
                                 tonalidadPrevia = tonalidadPrevia,
                                 isEditable = tonalidadPrevia.isNullOrBlank(),
@@ -121,16 +139,15 @@ class TonalidadesActivity : AppCompatActivity() {
                         adapter.updateList(mutableListOf())
                         btnGuardar.visibility = View.GONE
                     }
-                    // Finaliza el estado de carga
                     toggleLoadingState(false)
                 }
+
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@TonalidadesActivity, "Error de conexión: ${e.message}", Toast.LENGTH_LONG).show()
                     Log.e("TonalidadesActivity", "Error al buscar registros", e)
                     adapter.updateList(mutableListOf())
                     btnGuardar.visibility = View.GONE
-                    // Finaliza el estado de carga en caso de error
                     toggleLoadingState(false)
                 }
             }
@@ -141,41 +158,92 @@ class TonalidadesActivity : AppCompatActivity() {
         val registrosAActualizar = adapter.getUpdatedItems()
         if (registrosAActualizar.isEmpty()) {
             Toast.makeText(this, "No hay tonalidades para guardar.", Toast.LENGTH_SHORT).show()
-            // Finaliza el estado de carga si no hay nada que guardar
-            toggleLoadingState(false)
             return
         }
 
+        toggleLoadingState(true)
+
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val isConnected = connectivityManager.activeNetworkInfo?.isConnectedOrConnecting == true
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // CAMBIO 2: Incluir el nombre del usuario en el objeto de actualización
-                val updates = registrosAActualizar.map {
-                    mapOf(
-                        "rowNumber" to it.uniqueId.toInt(),
-                        "nuevaTonalidad" to it.nuevaTonalidad,
-                        "usuario" to (loggedInUser ?: "Usuario Desconocido") // Añade el usuario aquí
-                    )
-                }
+                if (isConnected) {
+                    val successfulUpdates = mutableListOf<Tonalidad>()
+                    val failedUpdates = mutableListOf<Tonalidad>()
 
-                val gson = Gson()
-                val updatesJson = gson.toJson(updates)
-                val response = GoogleSheetsApi2.service.updateTonalidades(updates = updatesJson)
+                    for (item in registrosAActualizar) {
+                        try {
+                            val response = GoogleSheetsApi2.service.updateTonalidades(
+                                uniqueId = item.uniqueId,
+                                nuevaTonalidad = item.nuevaTonalidad,
+                                usuario = loggedInUser ?: "Usuario Desconocido"
+                            )
 
-                withContext(Dispatchers.Main) {
-                    if (response.status == "success") {
-                        Toast.makeText(this@TonalidadesActivity, "Tonalidades guardadas exitosamente.", Toast.LENGTH_SHORT).show()
-                        finish()
-                    } else {
-                        Toast.makeText(this@TonalidadesActivity, "Error al guardar: ${response.message}", Toast.LENGTH_LONG).show()
+                            if (response.status == "success") {
+                                val tonalidad = Tonalidad(
+                                    uniqueId = item.uniqueId,
+                                    valorHojaDeRutaId = item.valorHojaDeRutaId,
+                                    nuevaTonalidad = item.nuevaTonalidad,
+                                    usuario = loggedInUser ?: "Usuario Desconocido",
+                                    isSynced = true
+                                )
+                                viewModel.insertTonalidad(tonalidad)
+                                successfulUpdates.add(tonalidad)
+                            } else {
+                                val tonalidad = Tonalidad(
+                                    uniqueId = item.uniqueId,
+                                    valorHojaDeRutaId = item.valorHojaDeRutaId,
+                                    nuevaTonalidad = item.nuevaTonalidad,
+                                    usuario = loggedInUser ?: "Usuario Desconocido",
+                                    isSynced = false
+                                )
+                                viewModel.insertTonalidad(tonalidad)
+                                failedUpdates.add(tonalidad)
+                            }
+                        } catch (e: Exception) {
+                            val tonalidad = Tonalidad(
+                                uniqueId = item.uniqueId,
+                                valorHojaDeRutaId = item.valorHojaDeRutaId,
+                                nuevaTonalidad = item.nuevaTonalidad,
+                                usuario = loggedInUser ?: "Usuario Desconocido",
+                                isSynced = false
+                            )
+                            viewModel.insertTonalidad(tonalidad)
+                            failedUpdates.add(tonalidad)
+                        }
                     }
-                    // Finaliza el estado de carga
-                    toggleLoadingState(false)
+
+                    withContext(Dispatchers.Main) {
+                        val message = "Tonalidades guardadas: ${successfulUpdates.size} subidas a la nube, ${failedUpdates.size} guardadas localmente."
+                        Toast.makeText(this@TonalidadesActivity, message, Toast.LENGTH_LONG).show()
+                        finish()
+                    }
+
+                } else {
+                    registrosAActualizar.forEach { item ->
+                        val tonalidad = Tonalidad(
+                            uniqueId = item.uniqueId,
+                            valorHojaDeRutaId = item.valorHojaDeRutaId,
+                            nuevaTonalidad = item.nuevaTonalidad,
+                            usuario = loggedInUser ?: "Usuario Desconocido",
+                            isSynced = false
+                        )
+                        viewModel.insertTonalidad(tonalidad)
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@TonalidadesActivity, "Sin conexión a Internet. Tonalidades guardadas localmente. Se sincronizarán automáticamente.", Toast.LENGTH_LONG).show()
+                        finish()
+                    }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@TonalidadesActivity, "Error de conexión: ${e.message}", Toast.LENGTH_LONG).show()
-                    Log.e("TonalidadesActivity", "Error al guardar registros", e)
-                    // Finaliza el estado de carga en caso de error
+                    Toast.makeText(this@TonalidadesActivity, "Error al procesar registros: ${e.message}", Toast.LENGTH_LONG).show()
+                    Log.e("TonalidadesActivity", "Error al procesar registros", e)
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
                     toggleLoadingState(false)
                 }
             }

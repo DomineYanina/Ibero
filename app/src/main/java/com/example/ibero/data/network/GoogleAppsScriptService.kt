@@ -30,7 +30,8 @@ data class AddInspectionData(
 data class TonalidadesData(
     @SerializedName("valorColumnaA") val valorColumnaA: String?,
     @SerializedName("valorColumnaV") val valorColumnaV: String?,
-    @SerializedName("rowNumber") val rowNumber: Int
+    @SerializedName("rowNumber") val rowNumber: Int,
+    @SerializedName("uniqueId") val uniqueId: String?
 )
 
 data class TonalidadesResponse(

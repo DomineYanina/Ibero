@@ -121,7 +121,9 @@ interface GoogleSheetsApiService {
     @POST("exec")
     suspend fun updateTonalidades(
         @Field("action") action: String = "updateTonalidades",
-        @Field("updates") updates: String
+        @Field("uniqueId") uniqueId: String, // <-- AGREGADO
+        @Field("nuevaTonalidad") nuevaTonalidad: String, // <-- AGREGADO
+        @Field("usuario") usuario: String // <-- AGREGADO
     ): ApiResponse
 
     // Nueva función para el inicio de sesión
@@ -168,7 +170,7 @@ interface GoogleSheetsApiService {
 
 // Objeto singleton para acceder al servicio de red
 object GoogleSheetsApi2 {
-    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbz3RazFwI0EMLzy66e3EbaEHDCG65MiCUJYEMebmpgxuG4_zUGRl9JLuPCXGJ5uVDYbRQ/"
+    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbxsOyCG8OmGtZaakoS-ft2WSmjKH6mcVApkBThOyL-TdWpqs2yPPKDhHkOuwvGq5XQKBA/"
 
     val service: GoogleSheetsApiService by lazy {
 

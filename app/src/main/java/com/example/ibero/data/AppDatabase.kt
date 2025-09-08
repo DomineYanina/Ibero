@@ -7,8 +7,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
 @Database(
-    entities = [Inspection::class, Articulo::class, TipoDeFalla::class, Tejeduria::class, Telar::class, HojaDeRuta::class],
-    version = 5, // **IMPORTANTE: Incrementa la versión**
+    entities = [Inspection::class, Articulo::class, TipoDeFalla::class, Tejeduria::class, Telar::class, HojaDeRuta::class, Tonalidad::class],
+    version = 6, // **IMPORTANTE: Incrementa la versión a 6 o superior**
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -20,6 +20,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tejeduriaDao(): TejeduriaDao
     abstract fun telarDao(): TelarDao
     abstract fun hojaDeRutaDao(): HojaDeRutaDao
+    abstract fun tonalidadDao(): TonalidadDao // <-- NUEVO DAO
 
     companion object {
         @Volatile

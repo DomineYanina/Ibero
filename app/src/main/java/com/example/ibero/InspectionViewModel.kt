@@ -13,16 +13,23 @@ import com.example.ibero.repository.InspectionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import com.example.ibero.repository.TonalidadRepository
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.Date
+import com.example.ibero.data.Tonalidad
+import kotlinx.coroutines.flow.combine
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class InspectionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: InspectionRepository
+    private val tonalidadRepository: TonalidadRepository
     private val connectivityObserver = NetworkConnectivityObserver(application)
     val allInspections: LiveData<List<Inspection>>
 
@@ -40,7 +47,9 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
 
     init {
         val inspectionDao = AppDatabase.getDatabase(application).inspectionDao()
+        val database = AppDatabase.getDatabase(application)
         repository = InspectionRepository(inspectionDao)
+        tonalidadRepository = TonalidadRepository(database.tonalidadDao())
         allInspections = repository.allInspections.asLiveData()
 
         viewModelScope.launch {
@@ -54,12 +63,17 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         }
 
         viewModelScope.launch {
-            repository.unsyncedInspections
-                .map { it.isNotEmpty() }
+            // Combina los flujos de inspecciones y tonalidades no sincronizadas
+            combine(
+                repository.unsyncedInspections,
+                tonalidadRepository.unsyncedTonalidades
+            ) { inspections, tonalidades ->
+                inspections.isNotEmpty() || tonalidades.isNotEmpty()
+            }
                 .distinctUntilChanged()
                 .collectLatest { hasUnsynced ->
                     if (hasUnsynced) {
-                        Log.d("SyncDebug", "Nuevas inspecciones pendientes detectadas. Iniciando sincronización...")
+                        Log.d("SyncDebug", "Nuevos registros pendientes detectados. Iniciando sincronización...")
                         performSync()
                     }
                 }
@@ -165,10 +179,11 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                 }
 
                 val unsyncedInspections = repository.getUnsyncedInspectionsOnce()
+                val unsyncedTonalidades = tonalidadRepository.getUnsyncedTonalidadesOnce() // <-- Obtiene tonalidades pendientes
 
-                if (unsyncedInspections.isEmpty()) {
+                if (unsyncedInspections.isEmpty() && unsyncedTonalidades.isEmpty()) {
                     withContext(Dispatchers.Main) {
-                        _syncMessage.value = "No hay inspecciones pendientes de sincronizar."
+                        _syncMessage.value = "No hay registros pendientes de sincronizar."
                     }
                     withContext(Dispatchers.Main) {
                         _isLoading.value = false
@@ -176,11 +191,12 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                     return@withLock
                 }
 
-                Log.d("SyncDebug", "Iniciando sincronización. Inspecciones pendientes: ${unsyncedInspections.size}")
+                Log.d("SyncDebug", "Iniciando sincronización. Inspecciones: ${unsyncedInspections.size}, Tonalidades: ${unsyncedTonalidades.size}")
 
                 var successfulSyncs = 0
                 var failedSyncs = 0
 
+                // Lógica de sincronización para Inspecciones (la misma que ya tenías)
                 for (inspection in unsyncedInspections) {
                     try {
                         val response: AddInspectionResponse = GoogleSheetsApi2.service.addInspection(
@@ -228,6 +244,33 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                     }
                 }
 
+                for (tonalidad in unsyncedTonalidades) {
+                    try {
+                        val response = GoogleSheetsApi2.service.updateTonalidades(
+                            uniqueId = tonalidad.uniqueId,
+                            nuevaTonalidad = tonalidad.nuevaTonalidad,
+                            usuario = tonalidad.usuario
+                        )
+
+                        if (response.status == "success") {
+                            val updatedTonalidad = tonalidad.copy(isSynced = true)
+                            tonalidadRepository.update(updatedTonalidad)
+                            successfulSyncs++
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                _syncMessage.value = "Error al subir tonalidad para ${tonalidad.valorHojaDeRutaId}: ${response.message}"
+                            }
+                            failedSyncs++
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            _syncMessage.value = "Error de conexión o API. Se guardó localmente. ${e.message}"
+                        }
+                        Log.e("SyncDebug", "Error al sincronizar datos de tonalidad para ${tonalidad.valorHojaDeRutaId}", e)
+                        failedSyncs++
+                    }
+                }
+
                 withContext(Dispatchers.Main) {
                     _syncMessage.value = "Sincronización completada: $successfulSyncs exitosas, $failedSyncs fallidas."
                 }
@@ -236,6 +279,10 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                 _isLoading.value = false
             }
         }
+    }
+
+    fun insertTonalidad(tonalidad: Tonalidad) = viewModelScope.launch {
+        tonalidadRepository.insert(tonalidad)
     }
 
     suspend fun finalizeAndSync(inspection: Inspection): Boolean {
