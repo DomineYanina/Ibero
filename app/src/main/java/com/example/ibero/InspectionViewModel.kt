@@ -15,16 +15,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import com.example.ibero.repository.TonalidadRepository
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.Date
 import com.example.ibero.data.Tonalidad
-import kotlinx.coroutines.flow.combine
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 class InspectionViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -429,16 +425,12 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                         Log.d("UpdateDebug", "Actualización exitosa en la nube y en la base de datos local.")
                         success = true // <--- Se establece en true si tiene éxito
                     } else {
-                        // Manejo de fallos de la API
-                        // ...
                         currentRetry++
                         if (currentRetry >= maxRetries) {
                             break
                         }
                     }
                 } catch (e: Exception) {
-                    // Manejo de excepciones
-                    // ...
                     currentRetry++
                     if (currentRetry >= maxRetries) {
                         break

@@ -18,8 +18,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.graphics.Color
 import com.example.ibero.data.TonalidadDao
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 
 class HomeActivity : AppCompatActivity() {
 
@@ -95,7 +93,8 @@ class HomeActivity : AppCompatActivity() {
         btnSync.setOnClickListener {
             inspectionViewModel.performSync()
             textSyncStatus.text = "Sin registros a sincronizar."
-            btnSync.text = "Sincronizar"
+            btnSync.text = "Sin registros a sincronizar"
+            btnSync.setTextColor(Color.BLACK)
             btnSync.isEnabled = false
             btnSync.setBackgroundColor(Color.GREEN)
         }
@@ -125,6 +124,8 @@ class HomeActivity : AppCompatActivity() {
                         btnSync.setBackgroundColor(Color.RED)
                         if (isNetworkAvailable(this@HomeActivity)) {
                             // Si hay conexión, muestra el botón de sincronizar
+                            btnSync.setBackgroundColor(Color.MAGENTA)
+                            btnSync.setTextColor(Color.WHITE)
                             btnSync.setText("Sincronizar")
                         } else {
                             // Si no hay conexión, muestra un mensaje de error

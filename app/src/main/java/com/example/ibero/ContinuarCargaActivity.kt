@@ -12,6 +12,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import android.graphics.Color
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.ViewModelProvider
@@ -42,6 +43,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
     private lateinit var formAndRecordsContainer: LinearLayout
     private lateinit var contenedorHojaRuta: LinearLayout
     private lateinit var textExistingRecordsTitle: TextView
+    private lateinit var titulo: TextView
     private lateinit var loadingOverlay: View
     private lateinit var progressBar: View
 
@@ -85,6 +87,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
         formAndRecordsContainer.visibility = View.GONE
 
         setupFieldWatchers()
+        chequearConexion()
 
         // Este observador es clave para que la lista se actualice automáticamente
         viewModel.currentSessionInspections.observe(this) { inspections ->
@@ -115,6 +118,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
         textExistingRecordsTitle = findViewById(R.id.text_existing_records_title)
         loadingOverlay = findViewById(R.id.loading_overlay)
         progressBar = findViewById(R.id.progress_bar)
+        titulo = findViewById(R.id.titulo)
 
         spinnerTipoCalidad = findViewById(R.id.spinner_tipo_calidad)
         layoutTipoFalla = findViewById(R.id.layout_tipo_de_falla)
@@ -129,6 +133,16 @@ class ContinuarCargaActivity : AppCompatActivity() {
         btnLimpiarMetros = findViewById(R.id.btn_limpiar_metros)
 
         containerTipoFalla = findViewById(R.id.container_tipo_falla)
+    }
+
+    private fun chequearConexion(){
+        if (!isNetworkAvailable(this@ContinuarCargaActivity)) {
+            editHojaDeRuta.isEnabled = false
+            btnBuscar.isEnabled = false
+            titulo.text = "Sin conexión a internet."
+            titulo.setBackgroundColor(Color.RED)
+            btnBuscar.setBackgroundColor(Color.GRAY)
+        }
     }
 
     private fun setupHistoryRecyclerView() {
@@ -334,7 +348,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
                         textExistingRecordsTitle.text = "Registros para la Hoja de Ruta: ${firstRecord.hojaDeRuta} - Artículo: ${firstRecord.articulo}"
                         formAndRecordsContainer.visibility = View.VISIBLE
                         // Ya no se llama al adaptador directamente aquí, el observador se encargará de esto
-                        Toast.makeText(this@ContinuarCargaActivity, "Hoja de Ruta encontrada. Historial cargado.", Toast.LENGTH_LONG).show()
+                        //Toast.makeText(this@ContinuarCargaActivity, "Hoja de Ruta encontrada. Historial cargado.", Toast.LENGTH_LONG).show()
                         toggleFormButtons()
                     } else {
                         Toast.makeText(this@ContinuarCargaActivity, "No se encontraron registros para la Hoja de Ruta. Por favor, revisa el número.", Toast.LENGTH_LONG).show()
@@ -345,7 +359,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Log.e(TAG, "Error al buscar y precargar registros: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ContinuarCargaActivity, "Error de red o API: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ContinuarCargaActivity, "Error al buscar, por favor intente de nuevo más tarde.", Toast.LENGTH_LONG).show()
                 }
             } finally {
                 withContext(Dispatchers.Main) {

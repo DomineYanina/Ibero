@@ -93,13 +93,13 @@ class LoginActivity : AppCompatActivity() {
                     } else {
                         val errorMessage = response.body()?.message ?: "Usuario o contraseña incorrectos."
                         Toast.makeText(this@LoginActivity, errorMessage, Toast.LENGTH_SHORT).show()
-                        Log.e("LoginActivity", "Login failed: ${response.errorBody()?.string() ?: "Unknown error"}")
+                        //Log.e("LoginActivity", "Login failed: ${response.errorBody()?.string() ?: "Unknown error"}")
                         showLoading(false)
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Log.e("LoginActivity", "Error de red o de API: ${e.message}")
+                    //Log.e("LoginActivity", "Error de red o de API: ${e.message}")
                     Toast.makeText(this@LoginActivity, "Error de conexión. Intente de nuevo.", Toast.LENGTH_SHORT).show()
                     showLoading(false)
                 }
@@ -128,7 +128,7 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun synchronizeAndNavigate(username: String) {
-        Toast.makeText(this, "Sincronizando datos de referencia...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Sincronizando datos. Por favor aguarde.", Toast.LENGTH_SHORT).show()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 // Sincronizar Artículos
@@ -184,7 +184,7 @@ class LoginActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     showLoading(false)
-                    Toast.makeText(this@LoginActivity, "Sincronización de datos completada.", Toast.LENGTH_SHORT).show()
+                    //Toast.makeText(this@LoginActivity, "Sincronización de datos completada.", Toast.LENGTH_SHORT).show()
                     val intent = Intent(this@LoginActivity, HomeActivity::class.java)
                     intent.putExtra("LOGGED_IN_USER", username)
                     startActivity(intent)

@@ -7,7 +7,6 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ibero.R
 import com.example.ibero.data.HistoricalInspection
-import com.example.ibero.data.Inspection // Importamos la clase Inspection
 
 // Se agrega el parámetro clickListener al constructor
 class InspectionHistoryAdapter(

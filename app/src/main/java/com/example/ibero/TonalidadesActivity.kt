@@ -15,19 +15,22 @@ import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.ui.TonalidadesAdapter
 import com.example.ibero.data.TonalidadItem
 import com.google.android.material.textfield.TextInputEditText // Importa el tipo correcto
-import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.content.Intent
+import android.graphics.Color
 import android.net.ConnectivityManager
+import android.widget.TextView
 import androidx.lifecycle.ViewModelProvider
 import com.example.ibero.data.Tonalidad
 
 class TonalidadesActivity : AppCompatActivity() {
 
     private lateinit var viewModel: InspectionViewModel
+
+    private lateinit var titulo_tonalidades: TextView
 
     private lateinit var editHojaRuta: TextInputEditText // Usamos el tipo correcto
     private lateinit var btnBuscar: Button
@@ -54,6 +57,7 @@ class TonalidadesActivity : AppCompatActivity() {
         initViews()
         setupListeners()
         setupRecyclerView()
+        chequearConexion()
 
         // Observa los mensajes de sincronización del ViewModel
         viewModel.syncMessage.observe(this) { message ->
@@ -64,10 +68,21 @@ class TonalidadesActivity : AppCompatActivity() {
         }
     }
 
+    private fun chequearConexion(){
+        if (!isNetworkAvailable(this@TonalidadesActivity)) {
+            editHojaRuta.isEnabled = false
+            btnBuscar.isEnabled = false
+            titulo_tonalidades.text = "Sin conexión a internet."
+            titulo_tonalidades.setBackgroundColor(Color.RED)
+            btnBuscar.setBackgroundColor(Color.GRAY)
+        }
+    }
+
     private fun initViews() {
         // Obtenemos las referencias a los nuevos elementos del layout
         progressBar = findViewById(R.id.progress_bar_loading)
         formContainer = findViewById(R.id.form_container)
+        titulo_tonalidades = findViewById(R.id.titulo_tonalidades)
 
         // Usamos TextInputEditText para evitar el ClassCastException
         editHojaRuta = findViewById(R.id.edit_hoja_ruta_tonalidad)
@@ -144,7 +159,7 @@ class TonalidadesActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@TonalidadesActivity, "Error de conexión: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@TonalidadesActivity, "Error de conexión.", Toast.LENGTH_LONG).show()
                     Log.e("TonalidadesActivity", "Error al buscar registros", e)
                     adapter.updateList(mutableListOf())
                     btnGuardar.visibility = View.GONE
@@ -250,10 +265,6 @@ class TonalidadesActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Alterna la visibilidad y el estado del formulario y la barra de progreso.
-     * @param isLoading Si es true, el formulario se deshabilita y la barra de progreso se muestra.
-     */
     private fun toggleLoadingState(isLoading: Boolean) {
         // Deshabilita/habilita los campos y botones
         editHojaRuta.isEnabled = !isLoading
