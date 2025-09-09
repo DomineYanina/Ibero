@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.graphics.Color
+import com.example.ibero.data.TonalidadDao
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 
@@ -32,6 +33,7 @@ class HomeActivity : AppCompatActivity() {
 
     // Inyecta tu DAO. Si no usas Hilt, inicialízalo manualmente en onCreate.
     private lateinit var inspectionDao: InspectionDao
+    private lateinit var tonalidadDao: TonalidadDao
 
     private lateinit var inspectionViewModel: InspectionViewModel
 
@@ -41,6 +43,7 @@ class HomeActivity : AppCompatActivity() {
 
         // Inicialización de la base de datos y el DAO
         inspectionDao = AppDatabase.getDatabase(this).inspectionDao()
+        tonalidadDao = AppDatabase.getDatabase(this).tonalidadDao()
 
         val factory = InspectionViewModelFactory(application)
         inspectionViewModel = ViewModelProvider(this, factory)[InspectionViewModel::class.java]
@@ -58,6 +61,7 @@ class HomeActivity : AppCompatActivity() {
 
         // Configuración de los listeners de los botones
         setupButtonListeners()
+        chequearConexion()
     }
 
     override fun onResume() {
@@ -97,13 +101,23 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    private fun chequearConexion(){
+        if (!isNetworkAvailable(this@HomeActivity)) {
+            btnUpdateTonalidad.isEnabled = false
+            btnViewInspections.isEnabled = false
+            btnUpdateTonalidad.setBackgroundColor(Color.GRAY)
+            btnViewInspections.setBackgroundColor(Color.GRAY)
+        }
+    }
+
     private fun checkSyncStatus() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 textSyncStatus.visibility =View.VISIBLE
                 btnSync.visibility = View.VISIBLE
                 // Obtener el conteo de registros no sincronizados
-                val unsyncedCount = inspectionDao.getUnsyncedCount()
+                val unsyncedCount = inspectionDao.getUnsyncedCount() + tonalidadDao.getUnsyncedCount()
+                //val unsyncedCount = inspectionDao.getUnsyncedCount()
 
                 withContext(Dispatchers.Main) {
                     if (unsyncedCount > 0) {

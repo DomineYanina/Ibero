@@ -1,6 +1,7 @@
 package com.example.ibero
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -8,6 +9,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.ibero.data.AppDatabase
@@ -26,6 +28,7 @@ import kotlinx.coroutines.withContext
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var editUsername: EditText
+    private lateinit var textoLogin: TextView
     private lateinit var editPassword: EditText
     private lateinit var btnLogin: Button
     private lateinit var loadingSpinner: ProgressBar
@@ -46,9 +49,22 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btn_login)
         loadingSpinner = findViewById(R.id.loading_spinner)
         formContainer = findViewById(R.id.form_container)
+        textoLogin = findViewById(R.id.text_login_instructions)
 
         btnLogin.setOnClickListener {
             performLogin()
+        }
+        chequearConexion()
+    }
+
+    private fun chequearConexion(){
+        if (!isNetworkAvailable(this@LoginActivity)) {
+            editUsername.isEnabled = false
+            editPassword.isEnabled = false
+            btnLogin.isEnabled = false
+            btnLogin.setBackgroundColor(Color.GRAY)
+            textoLogin.text = "Sin conexión a internet."
+            textoLogin.setBackgroundColor(Color.RED)
         }
     }
 
