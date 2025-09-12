@@ -73,6 +73,7 @@ class TonalidadesActivity : AppCompatActivity() {
             editHojaRuta.isEnabled = false
             btnBuscar.isEnabled = false
             titulo_tonalidades.text = "Sin conexión a internet."
+            titulo_tonalidades.setTextColor(Color.BLACK)
             titulo_tonalidades.setBackgroundColor(Color.RED)
             btnBuscar.setBackgroundColor(Color.GRAY)
         }

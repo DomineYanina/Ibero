@@ -140,6 +140,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
             editHojaDeRuta.isEnabled = false
             btnBuscar.isEnabled = false
             titulo.text = "Sin conexión a internet."
+            titulo.setTextColor(Color.BLACK)
             titulo.setBackgroundColor(Color.RED)
             btnBuscar.setBackgroundColor(Color.GRAY)
         }

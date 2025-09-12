@@ -2,6 +2,7 @@ package com.example.ibero
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.ConnectivityManager
 import android.os.Bundle
 import android.util.Log
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.graphics.Color
 import com.example.ibero.data.TonalidadDao
+import androidx.core.graphics.toColorInt
 
 class HomeActivity : AppCompatActivity() {
 
@@ -91,12 +93,15 @@ class HomeActivity : AppCompatActivity() {
         }
 
         btnSync.setOnClickListener {
-            inspectionViewModel.performSync()
-            textSyncStatus.text = "Sin registros a sincronizar."
-            btnSync.text = "Sin registros a sincronizar"
-            btnSync.setTextColor(Color.BLACK)
-            btnSync.isEnabled = false
-            btnSync.setBackgroundColor(Color.GREEN)
+            if(isNetworkAvailable(this@HomeActivity)){
+                inspectionViewModel.performSync()
+                textSyncStatus.text = "Sin registros a sincronizar."
+                btnSync.text = "Sin registros a sincronizar"
+                btnSync.setTextColor(Color.BLACK)
+                btnSync.isEnabled = false
+                btnSync.setBackgroundColor(Color.GREEN)
+            }
+            chequearConexion()
         }
     }
 
@@ -106,6 +111,11 @@ class HomeActivity : AppCompatActivity() {
             btnViewInspections.isEnabled = false
             btnUpdateTonalidad.setBackgroundColor(Color.GRAY)
             btnViewInspections.setBackgroundColor(Color.GRAY)
+        } else {
+            btnUpdateTonalidad.isEnabled = true
+            btnViewInspections.isEnabled = true
+            btnUpdateTonalidad.backgroundTintList = ColorStateList.valueOf("#2196F3".toColorInt())
+            btnViewInspections.backgroundTintList = ColorStateList.valueOf("#FF9800".toColorInt())
         }
     }
 
@@ -116,7 +126,6 @@ class HomeActivity : AppCompatActivity() {
                 btnSync.visibility = View.VISIBLE
                 // Obtener el conteo de registros no sincronizados
                 val unsyncedCount = inspectionDao.getUnsyncedCount() + tonalidadDao.getUnsyncedCount()
-                //val unsyncedCount = inspectionDao.getUnsyncedCount()
 
                 withContext(Dispatchers.Main) {
                     if (unsyncedCount > 0) {
@@ -127,18 +136,23 @@ class HomeActivity : AppCompatActivity() {
                             btnSync.setBackgroundColor(Color.MAGENTA)
                             btnSync.setTextColor(Color.WHITE)
                             btnSync.setText("Sincronizar")
+                            return@withContext
                         } else {
                             // Si no hay conexión, muestra un mensaje de error
                             btnSync.setText("Sin conexión a internet")
+                            return@withContext
                         }
                     } else {
                         // Oculta los elementos si no hay nada que sincronizar
                         textSyncStatus.text = "Sin registros por sincronizar."
                         btnSync.setBackgroundColor(Color.GREEN)
+                        btnSync.setTextColor(Color.BLACK)
                         btnSync.setText("Nada por sincronizar")
                         btnSync.isEnabled = false
+                        return@withContext
                     }
                 }
+
             } catch (e: Exception) {
                 Log.e("HomeActivity", "Error al verificar el estado de sincronización", e)
                 withContext(Dispatchers.Main) {
