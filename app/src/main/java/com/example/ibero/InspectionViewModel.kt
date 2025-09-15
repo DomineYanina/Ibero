@@ -185,6 +185,7 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
                     if (unsyncedInspections.isEmpty() && unsyncedTonalidades.isEmpty()) {
                         withContext(Dispatchers.Main) {
                             _syncMessage.value = "No hay registros pendientes de sincronizar."
+                            _isSyncing.postValue(false)
                         }
                         return@withLock
                     }

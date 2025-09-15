@@ -71,6 +71,17 @@ class HomeActivity : AppCompatActivity() {
             }
             btnSync.backgroundTintList =
                 ColorStateList.valueOf(ContextCompat.getColor(this, colorResId))
+
+            if(isSyncing){
+                // Se asigna el texto cuando la sincronización está en curso
+                btnSync.text = "Sincronizando..."
+                textSyncStatus.text = "Sincronizando..."
+            } else {
+                // Se asigna el texto cuando la sincronización ha terminado
+                btnSync.text = "Sincronizar"
+                textSyncStatus.text = "Sin registros por sincronizar."
+            }
+
             btnSync.isEnabled = !isSyncing
         })
 
