@@ -235,7 +235,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         btnIncorporar.setOnClickListener {
             if (validateForm()) {
                 if (editingInspection != null) {
-                    updateInspectionAndSync()
+                    updateInspectionAndResetForm()
                 } else {
                     saveInspectionAndResetForm()
                 }
@@ -257,11 +257,16 @@ class SegundoRegistroActivity : AppCompatActivity() {
         }
 
         btnCancelar.setOnClickListener {
-            val loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
-            val homeIntent = Intent(this, HomeActivity::class.java)
-            homeIntent.putExtra("LOGGED_IN_USER", loggedInUser)
-            startActivity(homeIntent)
-            finish()
+            if (hasRegisteredAnItem) {
+                // Al tocar "Ir a Inicio", se sincronizan todos los registros pendientes
+                finalizeAndSyncAll()
+            } else {
+                val loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
+                val homeIntent = Intent(this, HomeActivity::class.java)
+                homeIntent.putExtra("LOGGED_IN_USER", loggedInUser)
+                startActivity(homeIntent)
+                finish()
+            }
         }
 
         btnVolver.setOnClickListener {
@@ -360,7 +365,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateInspectionAndSync() {
+    private fun updateInspectionAndResetForm() {
         val inspectionToUpdate = editingInspection?.copy(
             tipoCalidad = spinnerTipoCalidad.text.toString(),
             tipoDeFalla = if (spinnerTipoCalidad.text.toString() == "Segunda") spinnerTipoDeFalla.text.toString() else null,
@@ -369,11 +374,21 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
         if (inspectionToUpdate != null) {
             lifecycleScope.launch {
-                viewModel.updateInspectionAndSync(inspectionToUpdate)
+                viewModel.updateInspection(inspectionToUpdate)
+                // Se actualiza la lista de la sesión para reflejar el cambio en la UI
+                viewModel.addInspectionToSessionList(inspectionToUpdate)
                 resetForm()
             }
         } else {
             Log.e("UpdateError", "No se pudo crear el objeto Inspection para actualizar. Objeto nulo.")
+        }
+    }
+
+    private fun saveInspectionAndFinalize() {
+        val inspection = createInspectionObject()
+        lifecycleScope.launch {
+            viewModel.insertInspection(inspection)
+            finalizeAndSyncAll()
         }
     }
 
@@ -386,35 +401,20 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
         if (inspectionToUpdate != null) {
             lifecycleScope.launch {
-                val success = viewModel.updateInspectionAndFinalize(inspectionToUpdate)
-
-                viewModel.clearCurrentSessionList()
-
-                if (success) {
-                    Toast.makeText(this@SegundoRegistroActivity, "Registro actualizado y finalizado.", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this@SegundoRegistroActivity, "No se pudo subir a la nube. Guardado localmente. Finalizando.", Toast.LENGTH_LONG).show()
-                }
-
-                val intent = Intent(this@SegundoRegistroActivity, HomeActivity::class.java)
-                intent.putExtra("LOGGED_IN_USER", usuario)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                startActivity(intent)
-                finish()
+                viewModel.updateInspection(inspectionToUpdate)
+                finalizeAndSyncAll()
             }
+        } else {
+            Log.e("UpdateError", "No se pudo crear el objeto Inspection para actualizar. Objeto nulo.")
         }
     }
 
-    private fun saveInspectionAndFinalize() {
-        val inspection = createInspectionObject()
+    private fun finalizeAndSyncAll() {
         lifecycleScope.launch {
-            val success = viewModel.finalizeAndSync(inspection)
+            viewModel.performSync()
             viewModel.clearCurrentSessionList()
-            if (success) {
-                Toast.makeText(this@SegundoRegistroActivity, "Registro subido y finalizado.", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this@SegundoRegistroActivity, "No se pudo subir a la nube. Guardado localmente. Finalizando.", Toast.LENGTH_LONG).show()
-            }
+
+            // Navegar a HomeActivity después de la sincronización
             val intent = Intent(this@SegundoRegistroActivity, HomeActivity::class.java)
             intent.putExtra("LOGGED_IN_USER", usuario)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
@@ -454,6 +454,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
             tipoDeFalla = tipoDeFalla,
             metrosDeTela = metrosDeTela,
             uniqueId = uniqueId,
+            isSynced = false,
             imagePaths = emptyList(),
             imageUrls = emptyList()
         )

@@ -170,7 +170,7 @@ interface GoogleSheetsApiService {
 
 // Objeto singleton para acceder al servicio de red
 object GoogleSheetsApi2 {
-    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbyHZpIwWfjdceimcDZbufja8Va4MNIGZa7MQ77ZuLzfRI8XbzZprcITRx3ngctKFqZEzQ/"
+    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbxoXVvkxWKlzXI9tjifcLZPY1TKPNoytHbLpmrr0-y_349bJl7Su-Lebmgn5Zc-D0IxNA/"
 
     val service: GoogleSheetsApiService by lazy {
 

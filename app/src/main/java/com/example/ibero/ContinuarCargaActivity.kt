@@ -179,11 +179,16 @@ class ContinuarCargaActivity : AppCompatActivity() {
         }
 
         btnCancelar.setOnClickListener {
-            val loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
-            val homeIntent = Intent(this, HomeActivity::class.java)
-            homeIntent.putExtra("LOGGED_IN_USER", loggedInUser)
-            startActivity(homeIntent)
-            finish()
+            if (hasRegisteredAnItem) {
+                // Si ya se ingresó al menos un registro, se sincronizan todos antes de salir.
+                finalizeAndSyncAll()
+            } else {
+                val loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
+                val homeIntent = Intent(this, HomeActivity::class.java)
+                homeIntent.putExtra("LOGGED_IN_USER", loggedInUser)
+                startActivity(homeIntent)
+                finish()
+            }
         }
 
         val calidadTypes = arrayOf("Primera", "Segunda")
@@ -203,7 +208,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
             Log.d(TAG, "Botón 'Incorporar' presionado. editingHistoricalInspection es nulo? ${editingHistoricalInspection == null}")
             if (validateForm()) {
                 if (editingHistoricalInspection != null) {
-                    updateInspectionAndSync()
+                    updateInspectionAndResetForm()
                 } else {
                     saveInspectionAndResetForm()
                 }
@@ -426,16 +431,36 @@ class ContinuarCargaActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateInspectionAndResetForm() {
+        val updatedInspection = createUpdatedInspectionObject()
+        lifecycleScope.launch {
+            viewModel.updateInspection(updatedInspection)
+            // Ya que el ViewModel actualiza la lista, no es necesario llamar a searchAndFetchRecords
+            // Solo se necesita resetear la UI
+            resetNewRecordForm()
+        }
+    }
+
     private fun saveInspectionAndFinalize() {
         val inspection = createInspectionObject()
         lifecycleScope.launch {
-            val success = viewModel.finalizeAndSync(inspection)
+            viewModel.insertInspection(inspection)
+            finalizeAndSyncAll()
+        }
+    }
+
+    private fun updateInspectionAndFinalize() {
+        val updatedInspection = createUpdatedInspectionObject()
+        lifecycleScope.launch {
+            viewModel.updateInspection(updatedInspection)
+            finalizeAndSyncAll()
+        }
+    }
+
+    private fun finalizeAndSyncAll() {
+        lifecycleScope.launch {
+            viewModel.performSync()
             viewModel.clearCurrentSessionList()
-            if (success) {
-                Toast.makeText(this@ContinuarCargaActivity, "Registro subido y finalizado.", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this@ContinuarCargaActivity, "No se pudo subir a la nube. Guardado localmente. Finalizando.", Toast.LENGTH_LONG).show()
-            }
 
             val userFromSession = viewModel.getCurrentSessionData().usuario
             val intent = Intent(this@ContinuarCargaActivity, HomeActivity::class.java)
@@ -483,66 +508,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
 
         toggleFormButtons()
         btnGuardarRegistro.isVisible = false
-    }
-
-    private fun updateInspectionAndSync() {
-        Log.d(TAG, "updateInspectionAndSync: Iniciando. editingHistoricalInspection es nulo? ${editingHistoricalInspection == null}")
-        btnBuscar.isVisible = true
-        btnGuardarRegistro.isVisible = true
-        val inspectionUniqueId = editingHistoricalInspection?.uniqueId
-
-        if (inspectionUniqueId != null) {
-            Log.d(TAG, "updateInspectionAndSync: uniqueId no es nulo. Procediendo con la actualización.")
-            val updatedInspection = createUpdatedInspectionObject()
-
-            lifecycleScope.launch {
-                val success = viewModel.updateInspectionAndSync(updatedInspection)
-
-                if (success.toString().isNotEmpty()) {
-                    Toast.makeText(this@ContinuarCargaActivity, "Registro actualizado en la nube.", Toast.LENGTH_SHORT).show()
-                    searchAndFetchRecords(editHojaDeRuta.text.toString().trim())
-                } else {
-                    Toast.makeText(this@ContinuarCargaActivity, "No se pudo actualizar en la nube. Intenta nuevamente.", Toast.LENGTH_LONG).show()
-                }
-
-                resetForm()
-            }
-        } else {
-            Log.e(TAG, "updateInspectionAndSync: ERROR. uniqueId es nulo. No se puede actualizar el registro.")
-            Toast.makeText(this, "No hay registro seleccionado para actualizar.", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun updateInspectionAndFinalize() {
-        Log.d(TAG, "updateInspectionAndFinalize: Iniciando. editingHistoricalInspection es nulo? ${editingHistoricalInspection == null}")
-        val inspectionUniqueId = editingHistoricalInspection?.uniqueId
-
-        if (inspectionUniqueId != null) {
-            Log.d(TAG, "updateInspectionAndFinalize: uniqueId no es nulo. Procediendo con la actualización y finalización.")
-            val updatedInspection = createUpdatedInspectionObject()
-
-            lifecycleScope.launch {
-                val success = viewModel.updateInspectionAndFinalize(updatedInspection)
-
-                if (success) {
-                    Toast.makeText(this@ContinuarCargaActivity, "Registro actualizado y finalizado.", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this@ContinuarCargaActivity, "No se pudo subir a la nube. Finalizando.", Toast.LENGTH_LONG).show()
-                }
-
-                viewModel.clearCurrentSessionList()
-
-                val userFromSession = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
-                val intent = Intent(this@ContinuarCargaActivity, HomeActivity::class.java)
-                intent.putExtra("LOGGED_IN_USER", userFromSession)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                startActivity(intent)
-                finish()
-            }
-        } else {
-            Log.e(TAG, "updateInspectionAndFinalize: ERROR. uniqueId es nulo. No se puede actualizar y finalizar.")
-            Toast.makeText(this, "No hay registro seleccionado para actualizar.", Toast.LENGTH_SHORT).show()
-        }
     }
 
     private fun createUpdatedInspectionObject(): Inspection {
