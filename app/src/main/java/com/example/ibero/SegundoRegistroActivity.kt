@@ -21,6 +21,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ibero.data.AppDatabase
+import com.example.ibero.data.HojaDeRuta
 import com.example.ibero.data.Inspection
 import com.example.ibero.data.network.GoogleSheetsApi2
 import com.example.ibero.data.network.GoogleSheetsApiService
@@ -411,6 +412,9 @@ class SegundoRegistroActivity : AppCompatActivity() {
 
     private fun finalizeAndSyncAll() {
         lifecycleScope.launch {
+            val hojaDeRutaEntity = HojaDeRuta(nombre = hojaDeRuta)
+            database.hojaDeRutaDao().insert(hojaDeRutaEntity)
+
             viewModel.performSync()
             viewModel.clearCurrentSessionList()
 

@@ -19,4 +19,7 @@ interface HojaDeRutaDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM hojas_de_ruta WHERE nombre = :nombre)")
     suspend fun exists(nombre: String): Boolean
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(hojaDeRuta: HojaDeRuta)
 }

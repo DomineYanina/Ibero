@@ -23,6 +23,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.net.ConnectivityManager
 import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import com.example.ibero.data.Tonalidad
 
@@ -70,8 +71,8 @@ class TonalidadesActivity : AppCompatActivity() {
 
     private fun chequearConexion(){
         if (!isNetworkAvailable(this@TonalidadesActivity)) {
-            editHojaRuta.isEnabled = false
-            btnBuscar.isEnabled = false
+            editHojaRuta.isVisible = false
+            btnBuscar.isVisible = false
             titulo_tonalidades.text = "Sin conexión a internet."
             titulo_tonalidades.setTextColor(Color.BLACK)
             titulo_tonalidades.setBackgroundColor(Color.RED)

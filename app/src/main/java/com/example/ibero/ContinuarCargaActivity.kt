@@ -137,8 +137,8 @@ class ContinuarCargaActivity : AppCompatActivity() {
 
     private fun chequearConexion(){
         if (!isNetworkAvailable(this@ContinuarCargaActivity)) {
-            editHojaDeRuta.isEnabled = false
-            btnBuscar.isEnabled = false
+            editHojaDeRuta.isVisible = false
+            btnBuscar.isVisible = false
             titulo.text = "Sin conexión a internet."
             titulo.setTextColor(Color.BLACK)
             titulo.setBackgroundColor(Color.RED)
