@@ -18,8 +18,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.graphics.Color
+import androidx.core.content.ContextCompat
 import com.example.ibero.data.TonalidadDao
 import androidx.core.graphics.toColorInt
+import androidx.lifecycle.Observer
+import androidx.room.InvalidationTracker
 
 class HomeActivity : AppCompatActivity() {
 
@@ -58,6 +61,25 @@ class HomeActivity : AppCompatActivity() {
 
         loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
         textWelcome.text = "Bienvenido, $loggedInUser"
+
+
+        inspectionViewModel.isSyncing.observe(this, Observer { isSyncing ->
+            val colorResId = if (isSyncing) {
+                R.color.magenta // Color para "Sincronizando..."
+            } else {
+                R.color.verde // Color para "Sincronización finalizada"
+            }
+            btnSync.backgroundTintList =
+                ColorStateList.valueOf(ContextCompat.getColor(this, colorResId))
+            btnSync.isEnabled = !isSyncing
+        })
+
+        btnSync.setOnClickListener {
+            lifecycleScope.launch {
+                inspectionViewModel.performSync()
+            }
+        }
+
 
         // Configuración de los listeners de los botones
         setupButtonListeners()

@@ -24,6 +24,9 @@ import com.example.ibero.data.Tonalidad
 
 class InspectionViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val _isSyncing = MutableLiveData<Boolean>(false)
+    val isSyncing: LiveData<Boolean> = _isSyncing
+
     private val repository: InspectionRepository
     private val tonalidadRepository: TonalidadRepository
     private val connectivityObserver = NetworkConnectivityObserver(application)
@@ -161,118 +164,120 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun performSync() {
+        _isSyncing.postValue(true)
         viewModelScope.launch(Dispatchers.IO) {
             withContext(Dispatchers.Main) {
                 _isLoading.value = true
             }
 
-            syncMutex.withLock {
-                if (!connectivityObserver.hasInternet()) {
-                    withContext(Dispatchers.Main) {
-                        _syncMessage.value = "No hay conexión a Internet. Los registros se guardan localmente."
+            try {
+                syncMutex.withLock {
+                    if (!connectivityObserver.hasInternet()) {
+                        withContext(Dispatchers.Main) {
+                            _syncMessage.value = "No hay conexión a Internet. Los registros se guardan localmente."
+                        }
+                        return@withLock
                     }
-                    return@withLock
-                }
 
-                val unsyncedInspections = repository.getUnsyncedInspectionsOnce()
-                val unsyncedTonalidades = tonalidadRepository.getUnsyncedTonalidadesOnce() // <-- Obtiene tonalidades pendientes
+                    val unsyncedInspections = repository.getUnsyncedInspectionsOnce()
+                    val unsyncedTonalidades = tonalidadRepository.getUnsyncedTonalidadesOnce()
 
-                if (unsyncedInspections.isEmpty() && unsyncedTonalidades.isEmpty()) {
-                    withContext(Dispatchers.Main) {
-                        _syncMessage.value = "No hay registros pendientes de sincronizar."
+                    if (unsyncedInspections.isEmpty() && unsyncedTonalidades.isEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            _syncMessage.value = "No hay registros pendientes de sincronizar."
+                        }
+                        return@withLock
                     }
-                    withContext(Dispatchers.Main) {
-                        _isLoading.value = false
-                    }
-                    return@withLock
-                }
 
-                Log.d("SyncDebug", "Iniciando sincronización. Inspecciones: ${unsyncedInspections.size}, Tonalidades: ${unsyncedTonalidades.size}")
+                    Log.d("SyncDebug", "Iniciando sincronización. Inspecciones: ${unsyncedInspections.size}, Tonalidades: ${unsyncedTonalidades.size}")
 
-                var successfulSyncs = 0
-                var failedSyncs = 0
+                    var successfulSyncs = 0
+                    var failedSyncs = 0
 
-                // Lógica de sincronización para Inspecciones (la misma que ya tenías)
-                for (inspection in unsyncedInspections) {
-                    try {
-                        val response: AddInspectionResponse = GoogleSheetsApi2.service.addInspection(
-                            action = "addInspection",
-                            usuario = inspection.usuario,
-                            fecha = inspection.fecha.time.toString(),
-                            hojaDeRuta = inspection.hojaDeRuta,
-                            tejeduria = inspection.tejeduria,
-                            telar = inspection.telar,
-                            tintoreria = inspection.tintoreria,
-                            articulo = inspection.articulo,
-                            color = inspection.color,
-                            rolloDeUrdido = inspection.rolloDeUrdido,
-                            orden = inspection.orden,
-                            cadena = inspection.cadena,
-                            anchoDeRollo = inspection.anchoDeRollo,
-                            esmerilado = inspection.esmerilado,
-                            ignifugo = inspection.ignifugo,
-                            impermeable = inspection.impermeable,
-                            otro = inspection.otro,
-                            tipoCalidad = inspection.tipoCalidad,
-                            tipoDeFalla = inspection.tipoDeFalla,
-                            metrosDeTela = inspection.metrosDeTela,
-                            uniqueId = inspection.uniqueId // <<-- AÑADE ESTA LINEA
-                        )
+                    // Lógica de sincronización para Inspecciones (la misma que ya tenías)
+                    for (inspection in unsyncedInspections) {
+                        try {
+                            val response: AddInspectionResponse = GoogleSheetsApi2.service.addInspection(
+                                action = "addInspection",
+                                usuario = inspection.usuario,
+                                fecha = inspection.fecha.time.toString(),
+                                hojaDeRuta = inspection.hojaDeRuta,
+                                tejeduria = inspection.tejeduria,
+                                telar = inspection.telar,
+                                tintoreria = inspection.tintoreria,
+                                articulo = inspection.articulo,
+                                color = inspection.color,
+                                rolloDeUrdido = inspection.rolloDeUrdido,
+                                orden = inspection.orden,
+                                cadena = inspection.cadena,
+                                anchoDeRollo = inspection.anchoDeRollo,
+                                esmerilado = inspection.esmerilado,
+                                ignifugo = inspection.ignifugo,
+                                impermeable = inspection.impermeable,
+                                otro = inspection.otro,
+                                tipoCalidad = inspection.tipoCalidad,
+                                tipoDeFalla = inspection.tipoDeFalla,
+                                metrosDeTela = inspection.metrosDeTela,
+                                uniqueId = inspection.uniqueId
+                            )
 
-                        if (response.status == "SUCCESS" && response.data.uniqueId != null) {
-                            val newUniqueId = response.data.uniqueId
-                            // Clave: Actualizar el registro local con el ID devuelto por el servidor
-                            val updatedInspection = inspection.copy(uniqueId = newUniqueId, isSynced = true, imageUrls = emptyList())
-                            repository.update(updatedInspection)
-                            successfulSyncs++
-                        } else {
-                            withContext(Dispatchers.Main) {
-                                _syncMessage.value = "Error al subir ${inspection.articulo}: ${response.message}"
+                            if (response.status == "SUCCESS" && response.data.uniqueId != null) {
+                                val newUniqueId = response.data.uniqueId
+                                val updatedInspection = inspection.copy(uniqueId = newUniqueId, isSynced = true, imageUrls = emptyList())
+                                repository.update(updatedInspection)
+                                successfulSyncs++
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    _syncMessage.value = "Error al subir ${inspection.articulo}: ${response.message}"
+                                }
+                                failedSyncs++
                             }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                _syncMessage.value = "Error de conexión o API. Se guardó localmente. ${e.message}"
+                            }
+                            Log.e("SyncDebug", "Error al sincronizar datos para ${inspection.articulo}", e)
                             failedSyncs++
                         }
-                    } catch (e: Exception) {
-                        withContext(Dispatchers.Main) {
-                            _syncMessage.value = "Error de conexión o API. Se guardó localmente. ${e.message}"
-                        }
-                        Log.e("SyncDebug", "Error al sincronizar datos para ${inspection.articulo}", e)
-                        failedSyncs++
                     }
-                }
 
-                for (tonalidad in unsyncedTonalidades) {
-                    try {
-                        val response = GoogleSheetsApi2.service.updateTonalidades(
-                            uniqueId = tonalidad.uniqueId,
-                            nuevaTonalidad = tonalidad.nuevaTonalidad,
-                            usuario = tonalidad.usuario
-                        )
+                    // Lógica de sincronización para Tonalidades (la misma que ya tenías)
+                    for (tonalidad in unsyncedTonalidades) {
+                        try {
+                            val response = GoogleSheetsApi2.service.updateTonalidades(
+                                uniqueId = tonalidad.uniqueId,
+                                nuevaTonalidad = tonalidad.nuevaTonalidad,
+                                usuario = tonalidad.usuario
+                            )
 
-                        if (response.status == "success") {
-                            val updatedTonalidad = tonalidad.copy(isSynced = true)
-                            tonalidadRepository.update(updatedTonalidad)
-                            successfulSyncs++
-                        } else {
-                            withContext(Dispatchers.Main) {
-                                _syncMessage.value = "Error al subir tonalidad para ${tonalidad.valorHojaDeRutaId}: ${response.message}"
+                            if (response.status == "success") {
+                                val updatedTonalidad = tonalidad.copy(isSynced = true)
+                                tonalidadRepository.update(updatedTonalidad)
+                                successfulSyncs++
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    _syncMessage.value = "Error al subir tonalidad para ${tonalidad.valorHojaDeRutaId}: ${response.message}"
+                                }
+                                failedSyncs++
                             }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                _syncMessage.value = "Error de conexión o API. Se guardó localmente. ${e.message}"
+                            }
+                            Log.e("SyncDebug", "Error al sincronizar datos de tonalidad para ${tonalidad.valorHojaDeRutaId}", e)
                             failedSyncs++
                         }
-                    } catch (e: Exception) {
-                        withContext(Dispatchers.Main) {
-                            _syncMessage.value = "Error de conexión o API. Se guardó localmente. ${e.message}"
-                        }
-                        Log.e("SyncDebug", "Error al sincronizar datos de tonalidad para ${tonalidad.valorHojaDeRutaId}", e)
-                        failedSyncs++
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        _syncMessage.value = "Sincronización completada: $successfulSyncs exitosas, $failedSyncs fallidas."
                     }
                 }
-
+            } finally {
+                _isSyncing.postValue(false)
                 withContext(Dispatchers.Main) {
-                    _syncMessage.value = "Sincronización completada: $successfulSyncs exitosas, $failedSyncs fallidas."
+                    _isLoading.value = false
                 }
-            }
-            withContext(Dispatchers.Main) {
-                _isLoading.value = false
             }
         }
     }
