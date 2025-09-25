@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".TonalidadesActivity">
+
+    <!-- Contenedor principal del formulario y los botones -->
+    <LinearLayout
+            android:id="@+id/form_container"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:orientation="vertical"
+            android:padding="16dp"
+            app:layout_constraintBottom_toTopOf="@id/btn_cancelar_tonalidades"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+                android:id="@+id/titulo_tonalidades"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="16dp"
+                android:text="Agregar Tonalidades"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+        <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_hoja_ruta_tonalidad"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:hint="Hoja de Ruta">
+
+            <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_hoja_ruta_tonalidad"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <Button
+                android:id="@+id/btn_buscar_tonalidades"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Buscar" />
+
+        <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_view_tonalidades"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="16dp"
+                android:layout_weight="1" />
+
+        <Button
+                android:id="@+id/btn_guardar_tonalidades"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Guardar"
+                android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- Nuevo botón de "Cancelar" anclado en la parte inferior, dentro del ConstraintLayout -->
+    <Button
+            android:id="@+id/btn_cancelar_tonalidades"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:backgroundTint="#FA0000"
+            android:padding="16dp"
+            android:text="Cancelar"
+            android:textColor="@android:color/white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Barra de progreso flotante (oculta por defecto) -->
+    <ProgressBar
+            android:id="@+id/progress_bar_loading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

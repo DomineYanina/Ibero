@@ -5,30 +5,58 @@ import androidx.room.PrimaryKey
 import java.util.Date
 
 @Entity(tableName = "inspections")
-data class Inspection( // <--- ¡AQUÍ ES DONDE VAN LAS PROPIEDADES!
-    @PrimaryKey(autoGenerate = true) // Genera automáticamente un ID único para cada inspección
-    val id: Long = 0, // ID único de la inspección en la base de datos local
+data class Inspection(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
 
-    val inspectionDate: Date, // Fecha de la inspección
-    val inspectionTime: String, // Hora de la inspección (formato HH:mm)
-    val inspectorName: String, // Nombre del inspector/usuario
-    val orderNumber: String, // Número de pedido/lote
-    val articleReference: String, // Referencia del artículo/producto
-    val supplier: String, // Proveedor
-    val color: String, // Color del producto
-    val totalLotQuantity: Int, // Cantidad total del lote inspeccionado
-    val sampleQuantity: Int, // Cantidad de muestra inspeccionada
-    val defectType: String, // Tipo de defecto (ej. "Mancha", "Hebra Suelta", "Otro")
-    val otherDefectDescription: String?, // Descripción si el tipo de defecto es "Otro"
-    val defectiveItemsQuantity: Int, // Cantidad de artículos con defecto
-    val defectDescription: String, // Descripción del defecto/observaciones
-    val actionTaken: String, // Acción tomada (ej. "Aprobado", "Rechazado")
-    val imagePaths: List<String>, // Rutas locales de las imágenes capturadas (se serializará a JSON)
-    val imageUrls: List<String>, // URLs de las imágenes subidas a Google Drive (se serializará a JSON)
-    val isSynced: Boolean = false, // Indica si la inspeEcción ya ha sido sincronizada con Google Sheets
-    val uniqueId: String // ID único para evitar duplicados en Google Sheets
-) // <--- ¡Cierra el paréntesis aquí, no hay '{' después del constructor principal para las propiedades!
-{
-    // El cuerpo de la clase (si necesitas métodos, inicializadores, etc.) va aquí
-    // pero NO las propiedades declaradas en el constructor primario
+    // Campos del formulario de registro (Parte 1)
+    val usuario: String,
+    val fecha: Date,
+    val hojaDeRuta: String,
+    val tejeduria: String,
+    val telar: Int,
+    val tintoreria: Int,
+    val articulo: String,
+    val color: Int,
+    val rolloDeUrdido: Int,
+    val orden: String,
+    val cadena: Int,
+    val anchoDeRollo: Int, // Ancho de rollo de la primera pantalla
+    val esmerilado: String,
+    val ignifugo: String,
+    val impermeable: String,
+    val otro: String,
+
+    // Campos de la segunda parte del formulario (Parte 2)
+    val tipoCalidad: String,
+    val tipoDeFalla: String?, // Puede ser nulo si TipoCalidad es "Primera"
+    val metrosDeTela: Double, // Renombrado de anchoDeRolloParte2
+
+    // Campos para la sincronización con Google Sheets
+    val isSynced: Boolean = false,
+    val uniqueId: String,
+    val imagePaths: List<String> = emptyList(),
+    val imageUrls: List<String> = emptyList(),
+)
+
+// Función de extensión para convertir un objeto Inspection a HistoricalInspection
+fun Inspection.toHistoricalInspection(): HistoricalInspection {
+    return HistoricalInspection(
+        uniqueId = this.uniqueId,
+        tipoCalidad = this.tipoCalidad,
+        tipoDeFalla = this.tipoDeFalla,
+        metrosDeTela = this.metrosDeTela,
+        hojaDeRuta = this.hojaDeRuta,
+        articulo = this.articulo,
+        color = this.color.toDouble(),
+        cadena = this.cadena.toDouble(),
+        anchoDeRollo = this.anchoDeRollo.toDouble(),
+        esmerilado = this.esmerilado,
+        ignifugo = this.ignifugo,
+        impermeable = this.impermeable,
+        otro = this.otro,
+        fecha = this.fecha.toString(),
+        usuario = this.usuario,
+        tejeduria = this.tejeduria
+    )
 }

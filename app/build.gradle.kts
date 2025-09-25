@@ -11,10 +11,10 @@ android {
 
     defaultConfig {
         applicationId = "com.example.ibero"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 4
+        versionName = "4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -106,5 +106,12 @@ dependencies {
 
     implementation(libs.squareup.okhttp)
     implementation(libs.squareup.okhttp.logging.interceptor)
+
+    // OkHttp para llamadas a la API
+    implementation(libs.okhttp.v4100)
+
+    // Coroutines para gestión de hilos
+    implementation(libs.kotlinx.coroutines.core.v171)
+    implementation(libs.kotlinx.coroutines.android.v171)
 
 }

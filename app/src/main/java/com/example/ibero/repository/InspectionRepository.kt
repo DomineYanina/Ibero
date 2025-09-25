@@ -3,6 +3,7 @@ package com.example.ibero.repository
 import com.example.ibero.data.Inspection
 import com.example.ibero.data.InspectionDao
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 class InspectionRepository(private val inspectionDao: InspectionDao) {
 
@@ -16,6 +17,11 @@ class InspectionRepository(private val inspectionDao: InspectionDao) {
      * Inserta una nueva inspección en la base de datos.
      * @param inspection El objeto Inspection a insertar.
      */
+
+    suspend fun getUnsyncedInspectionsOnce(): List<Inspection> {
+        return inspectionDao.getUnsyncedInspections().first() // Obtiene el primer valor y cancela la observación del Flow
+    }
+
     suspend fun insert(inspection: Inspection) {
         inspectionDao.insertInspection(inspection)
     }

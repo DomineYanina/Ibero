@@ -1,291 +1,452 @@
 package com.example.ibero
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.map
-import androidx.lifecycle.viewModelScope
+import android.app.Application
+import android.util.Log
+import androidx.lifecycle.*
+import com.example.ibero.data.AppDatabase
+import com.example.ibero.data.HistoricalInspection
 import com.example.ibero.data.Inspection
+import com.example.ibero.data.network.AddInspectionResponse
+import com.example.ibero.data.network.GoogleSheetsApi2
+import com.example.ibero.data.toInspection
 import com.example.ibero.repository.InspectionRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import com.example.ibero.repository.TonalidadRepository
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.Field
-import retrofit2.http.FormUrlEncoded
-import retrofit2.http.Multipart
-import retrofit2.http.POST
-import retrofit2.http.Part
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Locale
+import java.util.Date
+import com.example.ibero.data.Tonalidad
 
-interface GoogleAppsScriptService {
-    @FormUrlEncoded
-    @POST("exec")
-    suspend fun uploadInspectionData(
-        @Field("action") action: String = "addInspection",
-        @Field("uniqueId") uniqueId: String,
-        @Field("inspectionDate") inspectionDate: String,
-        @Field("inspectionTime") inspectionTime: String,
-        @Field("inspectorName") inspectorName: String,
-        @Field("orderNumber") orderNumber: String,
-        @Field("articleReference") articleReference: String,
-        @Field("supplier") supplier: String,
-        @Field("color") color: String,
-        @Field("totalLotQuantity") totalLotQuantity: Int,
-        @Field("sampleQuantity") sampleQuantity: Int,
-        @Field("defectType") defectType: String,
-        @Field("otherDefectDescription") otherDefectDescription: String?,
-        @Field("defectiveItemsQuantity") defectiveItemsQuantity: Int,
-        @Field("defectDescription") defectDescription: String,
-        @Field("actionTaken") actionTaken: String,
-        @Field("imageUrls") imageUrls: String
-    ): ApiResponse
+class InspectionViewModel(application: Application) : AndroidViewModel(application) {
 
-    @Multipart
-    @POST("exec")
-    suspend fun uploadImage(
-        @Part("action") action: String = "uploadImage",
-        @Part("uniqueId") uniqueId: String,
-        @Part image: MultipartBody.Part
-    ): ImageUploadResponse
-}
-
-data class ApiResponse(val status: String, val message: String)
-data class ImageUploadResponse(val status: String, val message: String, val imageUrl: String?)
-
-class InspectionViewModel(private val repository: InspectionRepository) : ViewModel() {
-
-    val allInspections: LiveData<List<Inspection>> = repository.allInspections.asLiveData()
-
-    private val unsyncedInspections = repository.unsyncedInspections.asLiveData()
-    val unsyncedCount: LiveData<Int> = unsyncedInspections.map { it.size }
-
-    private val _isNetworkAvailable = MutableLiveData<Boolean>(false)
-    val isNetworkAvailable: LiveData<Boolean> = _isNetworkAvailable
-
+    private val _isSyncing = MutableLiveData<Boolean>(false)
+    val isSyncing: LiveData<Boolean> = _isSyncing
+    private val repository: InspectionRepository
+    private val tonalidadRepository: TonalidadRepository
+    private val connectivityObserver = NetworkConnectivityObserver(application)
+    val allInspections: LiveData<List<Inspection>>
     private val _syncMessage = MutableLiveData<String?>()
-    val syncMessage: LiveData<String?> = _syncMessage
-
-    private val GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyUcLe6tu_U0ZjK9F_qu6CnSsXNyZB3C89OjTD5gLXu5h5XxOSZRLzwZqpj-QLGJWPUxA/exec/"
-
-    private val googleAppsScriptService: GoogleAppsScriptService by lazy {
-        Retrofit.Builder()
-            .baseUrl(GOOGLE_APPS_SCRIPT_WEB_APP_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(GoogleAppsScriptService::class.java)
-    }
-
-    private var isSyncing = false
-    private var syncJob: Job? = null
+    val syncMessage: LiveData<String?> get() = _syncMessage
+    private val _currentSessionInspections = MutableLiveData<MutableList<Inspection>>(mutableListOf())
+    val currentSessionInspections: LiveData<MutableList<Inspection>> get() = _currentSessionInspections
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> get() = _isLoading
+    private val syncMutex = Mutex()
+    private var sessionData: Inspection? = null
 
     init {
-        _isNetworkAvailable.observeForever { available ->
-            if (available && (unsyncedCount.value ?: 0) > 0 && !isSyncing) {
-                triggerSync()
+        val inspectionDao = AppDatabase.getDatabase(application).inspectionDao()
+        val database = AppDatabase.getDatabase(application)
+        repository = InspectionRepository(inspectionDao)
+        tonalidadRepository = TonalidadRepository(database.tonalidadDao())
+        allInspections = repository.allInspections.asLiveData()
+
+        viewModelScope.launch {
+            connectivityObserver.observe()
+            connectivityObserver.connectionStatus.collectLatest { status ->
+                if (status is ConnectionStatus.Available) {
+                    Log.d("SyncDebug", "Conexión a Internet detectada. Iniciando sincronización de registros pendientes...")
+                    performSync()
+                }
             }
         }
-        unsyncedInspections.observeForever { inspections ->
-            if (_isNetworkAvailable.value == true && inspections.isNotEmpty() && !isSyncing) {
-                triggerSync()
+
+        viewModelScope.launch {
+            // Combina los flujos de inspecciones y tonalidades no sincronizadas
+            combine(
+                repository.unsyncedInspections,
+                tonalidadRepository.unsyncedTonalidades
+            ) { inspections, tonalidades ->
+                inspections.isNotEmpty() || tonalidades.isNotEmpty()
             }
+                .distinctUntilChanged()
+                .collectLatest { hasUnsynced ->
+                    if (hasUnsynced) {
+                        Log.d("SyncDebug", "Nuevos registros pendientes detectados. Iniciando sincronización...")
+                        performSync()
+                    }
+                }
         }
     }
 
-    fun insertInspection(inspection: Inspection) = viewModelScope.launch(Dispatchers.IO) {
+    fun initSessionData(
+        usuario: String,
+        hojaDeRuta: String,
+        fecha: Date,
+        tejeduria: String,
+        telar: String,
+        tintoreria: String,
+        articulo: String,
+        color: String,
+        rolloDeUrdido: String,
+        orden: String,
+        cadena: String,
+        anchoDeRollo: String,
+        esmerilado: String,
+        ignifugo: String,
+        impermeable: String,
+        otro: String,
+        uniqueId: String
+    ) {
+        try {
+            sessionData = Inspection(
+                usuario = usuario,
+                fecha = fecha,
+                hojaDeRuta = hojaDeRuta,
+                tejeduria = tejeduria,
+                telar = telar.toIntOrNull() ?: 0,
+                tintoreria = tintoreria.toIntOrNull() ?: 0,
+                articulo = articulo,
+                color = color.toIntOrNull() ?: 0,
+                rolloDeUrdido = rolloDeUrdido.toIntOrNull() ?: 0,
+                orden = orden,
+                cadena = cadena.toIntOrNull() ?: 0,
+                anchoDeRollo = anchoDeRollo.toIntOrNull() ?: 0,
+                esmerilado = esmerilado,
+                ignifugo = ignifugo,
+                impermeable = impermeable,
+                otro = otro,
+                tipoCalidad = "",
+                tipoDeFalla = null,
+                metrosDeTela = 0.0,
+                uniqueId = uniqueId
+            )
+        } catch (e: NumberFormatException) {
+            Log.e("ViewModel", "Error al convertir un campo de String a Int. Revisar los datos de entrada.", e)
+            throw e
+        }
+    }
+
+    fun getCurrentSessionData(): Inspection {
+        return sessionData ?: throw IllegalStateException("Session data not initialized.")
+    }
+
+    fun insertInspection(inspection: Inspection) = viewModelScope.launch {
         repository.insert(inspection)
-        withContext(Dispatchers.Main) {
-            if (_isNetworkAvailable.value == true && !isSyncing) {
-                triggerSync()
-            }
-        }
+        Log.e("HojaDeRutaTransmitida", "Hoja de ruta transmitida: ${inspection.hojaDeRuta}")
+        addInspectionToSessionList(inspection)
     }
 
-    fun updateNetworkStatus(available: Boolean) {
-        val oldStatus = _isNetworkAvailable.value
-        _isNetworkAvailable.value = available
-        if (available && oldStatus == false && (unsyncedCount.value ?: 0) > 0 && !isSyncing) {
-            triggerSync()
-        }
+    fun updateInspection(inspection: Inspection) = viewModelScope.launch {
+        repository.update(inspection)
+    }
+
+    fun deleteInspection(inspection: Inspection) = viewModelScope.launch {
+        repository.delete(inspection.id)
     }
 
     fun clearSyncMessage() {
         _syncMessage.value = null
     }
 
-    fun requestManualSync() {
-        if (!isNetworkAvailable.value!!) {
-            _syncMessage.value = "No hay conexión de red para sincronizar."
-            return
+    fun addInspectionToSessionList(inspection: Inspection) {
+        val currentList = _currentSessionInspections.value ?: mutableListOf()
+        val existingIndex = currentList.indexOfFirst { it.uniqueId == inspection.uniqueId }
+        if (existingIndex != -1) {
+            currentList[existingIndex] = inspection
+        } else {
+            currentList.add(0, inspection)
         }
-        if (isSyncing) {
-            _syncMessage.value = "La sincronización ya está en progreso."
-            return
-        }
-        if ((unsyncedCount.value ?: 0) == 0) {
-            _syncMessage.value = "No hay inspecciones pendientes de sincronizar."
-            return
-        }
-        triggerSync()
+        _currentSessionInspections.value = currentList
     }
 
-    private fun triggerSync() {
-        if (isSyncing) return
-
-        syncJob?.cancel()
-        syncJob = viewModelScope.launch(Dispatchers.IO) {
-            performSync()
-        }
+    fun clearCurrentSessionList() {
+        _currentSessionInspections.value = mutableListOf()
     }
 
-    private suspend fun performSync() {
-        if (isSyncing) {
-            return
-        }
-        isSyncing = true
-
-        try {
-            val inspectionsToSync = repository.unsyncedInspections.firstOrNull() ?: emptyList()
-
-            if (inspectionsToSync.isEmpty()) {
-                withContext(Dispatchers.Main) {
-                    _syncMessage.value = "No hay inspecciones pendientes de sincronizar."
-                }
-                return
-            }
-
+    fun performSync() {
+        _isSyncing.postValue(true)
+        viewModelScope.launch(Dispatchers.IO) {
             withContext(Dispatchers.Main) {
-                _syncMessage.value = "Sincronizando ${inspectionsToSync.size} inspecciones..."
+                _isLoading.value = true
             }
 
-            var successfulSyncs = 0
-            var failedSyncs = 0
+            try {
+                syncMutex.withLock {
+                    if (!connectivityObserver.hasInternet()) {
+                        withContext(Dispatchers.Main) {
+                            _syncMessage.value = "No hay conexión a Internet. Los registros se guardan localmente."
+                        }
+                        return@withLock
+                    }
 
-            for (inspection in inspectionsToSync) {
+                    val unsyncedInspections = repository.getUnsyncedInspectionsOnce()
+                    val unsyncedTonalidades = tonalidadRepository.getUnsyncedTonalidadesOnce()
 
-                var currentInspectionFailed = false
-                val uploadedImageUrls = mutableListOf<String>()
+                    if (unsyncedInspections.isEmpty() && unsyncedTonalidades.isEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            _syncMessage.value = "No hay registros pendientes de sincronizar."
+                            _isSyncing.postValue(false)
+                        }
+                        return@withLock
+                    }
 
-                for (imagePath in inspection.imagePaths) {
-                    val imageFile = File(imagePath)
-                    if (imageFile.exists()) {
-                        val requestFile = imageFile.asRequestBody("image/*".toMediaTypeOrNull())
-                        val imagePart = MultipartBody.Part.createFormData("image", imageFile.name, requestFile)
+                    Log.d("SyncDebug", "Iniciando sincronización. Inspecciones: ${unsyncedInspections.size}, Tonalidades: ${unsyncedTonalidades.size}")
 
+                    var successfulSyncs = 0
+                    var failedSyncs = 0
+
+                    // Lógica de sincronización para Inspecciones (la misma que ya tenías)
+                    for (inspection in unsyncedInspections) {
                         try {
-                            val imageUploadResponse = googleAppsScriptService.uploadImage(
-                                uniqueId = inspection.uniqueId,
-                                image = imagePart
+                            val response: AddInspectionResponse = GoogleSheetsApi2.service.addInspection(
+                                action = "addInspection",
+                                usuario = inspection.usuario,
+                                fecha = inspection.fecha.time.toString(),
+                                hojaDeRuta = inspection.hojaDeRuta,
+                                tejeduria = inspection.tejeduria,
+                                telar = inspection.telar,
+                                tintoreria = inspection.tintoreria,
+                                articulo = inspection.articulo,
+                                color = inspection.color,
+                                rolloDeUrdido = inspection.rolloDeUrdido,
+                                orden = inspection.orden,
+                                cadena = inspection.cadena,
+                                anchoDeRollo = inspection.anchoDeRollo,
+                                esmerilado = inspection.esmerilado,
+                                ignifugo = inspection.ignifugo,
+                                impermeable = inspection.impermeable,
+                                otro = inspection.otro,
+                                tipoCalidad = inspection.tipoCalidad,
+                                tipoDeFalla = inspection.tipoDeFalla,
+                                metrosDeTela = inspection.metrosDeTela,
+                                uniqueId = inspection.uniqueId
                             )
 
-                            if (imageUploadResponse.status == "SUCCESS" && imageUploadResponse.imageUrl != null) {
-                                uploadedImageUrls.add(imageUploadResponse.imageUrl)
-                                imageFile.delete()
+                            if (response.status == "SUCCESS" && response.data.uniqueId != null) {
+                                val newUniqueId = response.data.uniqueId
+                                val updatedInspection = inspection.copy(uniqueId = newUniqueId, isSynced = true, imageUrls = emptyList())
+                                repository.update(updatedInspection)
+                                successfulSyncs++
                             } else {
                                 withContext(Dispatchers.Main) {
-                                    _syncMessage.value = "Error al subir imagen para ${inspection.articleReference}: ${imageUploadResponse.message}"
+                                    _syncMessage.value = "Error al subir ${inspection.articulo}: ${response.message}"
                                 }
-                                currentInspectionFailed = true
-                                break
+                                failedSyncs++
                             }
                         } catch (e: Exception) {
                             withContext(Dispatchers.Main) {
-                                _syncMessage.value = "Error de red/API al subir imagen para ${inspection.articleReference}: ${e.message}"
+                                _syncMessage.value = "Error de conexión o API. Se guardó localmente. ${e.message}"
                             }
-                            currentInspectionFailed = true
-                            break
-                        }
-                    } else {
-                        withContext(Dispatchers.Main) {
-                            _syncMessage.value = "La imagen local no existe: $imagePath para ${inspection.articleReference}"
+                            Log.e("SyncDebug", "Error al sincronizar datos para ${inspection.articulo}", e)
+                            failedSyncs++
                         }
                     }
-                }
 
-                if (currentInspectionFailed) {
-                    failedSyncs++
-                    continue
-                }
+                    // Lógica de sincronización para Tonalidades (la misma que ya tenías)
+                    for (tonalidad in unsyncedTonalidades) {
+                        try {
+                            val response = GoogleSheetsApi2.service.updateTonalidades(
+                                uniqueId = tonalidad.uniqueId,
+                                nuevaTonalidad = tonalidad.nuevaTonalidad,
+                                usuario = tonalidad.usuario
+                            )
 
-                try {
-                    val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                    val inspectionDateFormatted = dateFormat.format(inspection.inspectionDate)
-
-                    val apiResponse = googleAppsScriptService.uploadInspectionData(
-                        uniqueId = inspection.uniqueId,
-                        inspectionDate = inspectionDateFormatted,
-                        inspectionTime = inspection.inspectionTime,
-                        inspectorName = inspection.inspectorName,
-                        orderNumber = inspection.orderNumber,
-                        articleReference = inspection.articleReference,
-                        supplier = inspection.supplier,
-                        color = inspection.color,
-                        totalLotQuantity = inspection.totalLotQuantity,
-                        sampleQuantity = inspection.sampleQuantity,
-                        defectType = inspection.defectType,
-                        otherDefectDescription = inspection.otherDefectDescription,
-                        defectiveItemsQuantity = inspection.defectiveItemsQuantity,
-                        defectDescription = inspection.defectDescription,
-                        actionTaken = inspection.actionTaken,
-                        imageUrls = uploadedImageUrls.joinToString(",")
-                    )
-
-                    if (apiResponse.status == "SUCCESS") {
-                        val updatedInspection = inspection.copy(isSynced = true, imageUrls = uploadedImageUrls)
-                        repository.update(updatedInspection)
-                        successfulSyncs++
-                    } else {
-                        withContext(Dispatchers.Main) {
-                            _syncMessage.value = "Error de sincronización para ${inspection.articleReference}: ${apiResponse.message}"
+                            if (response.status == "success") {
+                                val updatedTonalidad = tonalidad.copy(isSynced = true)
+                                tonalidadRepository.update(updatedTonalidad)
+                                successfulSyncs++
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    _syncMessage.value = "Error al subir tonalidad para ${tonalidad.valorHojaDeRutaId}: ${response.message}"
+                                }
+                                failedSyncs++
+                            }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                _syncMessage.value = "Error de conexión o API. Se guardó localmente. ${e.message}"
+                            }
+                            Log.e("SyncDebug", "Error al sincronizar datos de tonalidad para ${tonalidad.valorHojaDeRutaId}", e)
+                            failedSyncs++
                         }
-                        failedSyncs++
                     }
-                } catch (e: Exception) {
+
                     withContext(Dispatchers.Main) {
-                        _syncMessage.value = "Error de red/API al sincronizar datos para ${inspection.articleReference}: ${e.message}"
+                        _syncMessage.value = "Sincronización completada: $successfulSyncs exitosas, $failedSyncs fallidas."
                     }
-                    failedSyncs++
                 }
-            }
-
-            withContext(Dispatchers.Main) {
-                if (failedSyncs > 0) {
-                    _syncMessage.value = "Sincronización completada con algunos errores. Éxitos: $successfulSyncs, Fallos: $failedSyncs."
-                } else {
-                    _syncMessage.value = "Sincronización completada. Todas las $successfulSyncs inspecciones sincronizadas."
-                }
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                _syncMessage.value = "Error inesperado durante la sincronización: ${e.message}"
-            }
-        } finally {
-            isSyncing = false
-            withContext(Dispatchers.Main) {
-                if (_isNetworkAvailable.value == true && (unsyncedCount.value ?: 0) > 0) {
-                    triggerSync()
+            } finally {
+                _isSyncing.postValue(false)
+                withContext(Dispatchers.Main) {
+                    _isLoading.value = false
                 }
             }
         }
     }
-}
 
-class InspectionViewModelFactory(private val repository: InspectionRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(InspectionViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return InspectionViewModel(repository) as T
+    fun insertTonalidad(tonalidad: Tonalidad) = viewModelScope.launch {
+        tonalidadRepository.insert(tonalidad)
+    }
+
+    suspend fun finalizeAndSync(inspection: Inspection): Boolean {
+        withContext(Dispatchers.Main) {
+            _isLoading.value = true
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
+
+        try {
+            val response: AddInspectionResponse = GoogleSheetsApi2.service.addInspection(
+                action = "addInspection",
+                usuario = inspection.usuario,
+                fecha = inspection.fecha.time.toString(),
+                hojaDeRuta = inspection.hojaDeRuta,
+                tejeduria = inspection.tejeduria,
+                telar = inspection.telar,
+                tintoreria = inspection.tintoreria,
+                articulo = inspection.articulo,
+                color = inspection.color,
+                rolloDeUrdido = inspection.rolloDeUrdido,
+                orden = inspection.orden,
+                cadena = inspection.cadena,
+                anchoDeRollo = inspection.anchoDeRollo,
+                esmerilado = inspection.esmerilado,
+                ignifugo = inspection.ignifugo,
+                impermeable = inspection.impermeable,
+                otro = inspection.otro,
+                tipoCalidad = inspection.tipoCalidad,
+                tipoDeFalla = inspection.tipoDeFalla,
+                metrosDeTela = inspection.metrosDeTela,
+                uniqueId = inspection.uniqueId // <<-- AÑADE ESTA LINEA
+            )
+
+            if (response.status == "SUCCESS" && response.data.uniqueId != null) {
+                val newUniqueId = response.data.uniqueId
+                val updatedInspection = inspection.copy(uniqueId = newUniqueId, isSynced = true, imageUrls = emptyList())
+                // Clave: Insertar el registro con el ID devuelto por el servidor
+                repository.insert(updatedInspection)
+                withContext(Dispatchers.Main) {
+                    _isLoading.value = false
+                }
+                return true
+            } else {
+                repository.insert(inspection)
+                withContext(Dispatchers.Main) {
+                    _isLoading.value = false
+                }
+                return false
+            }
+        } catch (e: Exception) {
+            repository.insert(inspection)
+            withContext(Dispatchers.Main) {
+                _isLoading.value = false
+            }
+            Log.e("ViewModel", "Error al finalizar y sincronizar", e)
+            return false
+        }
+    }
+
+    // NUEVO MÉTODO: Actualiza el registro local y lo sincroniza con Google Sheets
+    suspend fun updateInspectionAndSync(inspection: Inspection) {
+        Log.d("UpdateDebug", "Llamada a updateInspectionAndSync en el ViewModel. UniqueId: ${inspection.uniqueId}")
+
+        // 1. Actualiza el registro en la base de datos local
+        try {
+            repository.update(inspection)
+            addInspectionToSessionList(inspection)
+            Log.d("UpdateDebug", "Registro local actualizado exitosamente.")
+        } catch (e: Exception) {
+            Log.e("UpdateError", "Error al actualizar el registro local: ${e.message}", e)
+        }
+
+        // 2. Notifica a la UI sobre el cambio en la lista de la sesión
+        addInspectionToSessionList(inspection)
+        Log.d("UpdateDebug", "Lista de la sesión actualizada.")
+
+        // 3. Intenta sincronizar el cambio con la nube
+        val success = syncOneInspection(inspection)
+        Log.d("UpdateDebug", "Intento de sincronización con la nube completado. Éxito: $success")
+    }
+
+    // NUEVO MÉTODO: Actualiza el registro local, lo sincroniza con la nube y finaliza
+    suspend fun updateInspectionAndFinalize(inspection: Inspection): Boolean {
+        // 1. Actualiza el registro en la base de datos local
+        repository.update(inspection)
+        // 2. Sincroniza y retorna el resultado
+        return syncOneInspection(inspection)
+    }
+
+    fun loadHistoricalInspections(records: List<HistoricalInspection>) {
+        // Clear the current list to avoid duplicates
+        _currentSessionInspections.value = mutableListOf()
+
+        // Convert the historical records to Inspection objects and add them to the session list
+        val inspections = records.map { it.toInspection() }
+
+        // Add all converted inspections to the internal list
+        _currentSessionInspections.value = inspections.toMutableList()
+    }
+
+    // NUEVO MÉTODO: Sincroniza un solo registro
+    private suspend fun syncOneInspection(inspection: Inspection): Boolean {
+        // Activa el indicador de carga al inicio.
+        // Aunque ya lo tienes en el Activity, es buena práctica tenerlo aquí también.
+        withContext(Dispatchers.Main) {
+            _isLoading.value = true
+            Log.d("UpdateDebug", "Indicador de carga activado.")
+        }
+
+        if (!connectivityObserver.hasInternet()) {
+            withContext(Dispatchers.Main) {
+                _syncMessage.value = "No hay conexión a Internet. El registro se guardó localmente."
+            }
+            // Desactiva el indicador de carga en caso de fallo inmediato
+            withContext(Dispatchers.Main) {
+                _isLoading.value = false
+            }
+            Log.e("UpdateError", "No hay conexión a Internet.")
+            return false
+        }
+
+        val maxRetries = 3
+        var currentRetry = 0
+        var success = false
+
+        try {
+            // Lógica de reintento
+            while (currentRetry < maxRetries && !success) {
+                try {
+                    // ... (Tu lógica de llamada a la API y actualización del repositorio)
+                    Log.d("UpdateDebug", "Iniciando llamada a la API para updateInspection (Intento ${currentRetry + 1}).")
+                    val response = GoogleSheetsApi2.service.updateInspection(
+                        uniqueId = inspection.uniqueId,
+                        tipoCalidad = inspection.tipoCalidad,
+                        tipoDeFalla = inspection.tipoDeFalla,
+                        metrosDeTela = inspection.metrosDeTela
+                    )
+
+                    if (response.status == "SUCCESS") {
+                        val updatedInspection = inspection.copy(isSynced = true)
+                        repository.update(updatedInspection)
+                        withContext(Dispatchers.Main) {
+                            _syncMessage.value = "Registro actualizado exitosamente en la nube."
+                        }
+                        Log.d("UpdateDebug", "Actualización exitosa en la nube y en la base de datos local.")
+                        success = true // <--- Se establece en true si tiene éxito
+                    } else {
+                        currentRetry++
+                        if (currentRetry >= maxRetries) {
+                            break
+                        }
+                    }
+                } catch (e: Exception) {
+                    currentRetry++
+                    if (currentRetry >= maxRetries) {
+                        break
+                    }
+                }
+            }
+        } finally {
+            // Desactiva el indicador de carga independientemente del resultado (éxito o fallo)
+            withContext(Dispatchers.Main) {
+                _isLoading.value = false
+                Log.d("UpdateDebug", "Indicador de carga desactivado. Finalizado.")
+            }
+        }
+
+        return success
     }
 }

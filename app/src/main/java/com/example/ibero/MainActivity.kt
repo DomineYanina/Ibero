@@ -6,10 +6,7 @@ import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
@@ -24,29 +21,23 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
-import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputLayout
-import com.example.ibero.data.AppDatabase
-import com.example.ibero.data.Inspection
-import com.example.ibero.repository.InspectionRepository
-import kotlinx.coroutines.launch
+import com.example.ibero.ui.InspectionHistoryAdapter
+import com.example.ibero.data.HistoricalInspection
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 class MainActivity : AppCompatActivity() {
 
@@ -102,27 +93,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
-    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         initViews()
 
-        val database = AppDatabase.getDatabase(applicationContext)
-        val repository = InspectionRepository(database.inspectionDao())
-        val factory = InspectionViewModelFactory(repository)
+        val factory = InspectionViewModelFactory(application)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
         setupSpinners()
-
         setupListeners()
-
         observeViewModel()
-
         setupHistoryRecyclerView()
-
         setCurrentDateTime()
     }
 
@@ -171,8 +154,6 @@ class MainActivity : AppCompatActivity() {
         spinnerActionTaken.setAdapter(actionAdapter)
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
-    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     private fun setupListeners() {
         editInspectionDate.setOnClickListener {
             showDatePickerDialog()
@@ -187,7 +168,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnSaveInspection.setOnClickListener {
-            saveInspection()
+            Toast.makeText(this, "Esta funcionalidad ha sido movida a la pantalla de registro.", Toast.LENGTH_SHORT).show()
         }
 
         btnClearForm.setOnClickListener {
@@ -195,7 +176,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnForceSync.setOnClickListener {
-            viewModel.requestManualSync()
+            viewModel.performSync()
         }
 
         addRequiredFieldValidation(editArticleReference, "Referencia del Artículo es obligatoria")
@@ -219,20 +200,21 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
-    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     private fun observeViewModel() {
-
-        viewModel.unsyncedCount.observe(this) { count ->
-            val currentNetworkStatus = isNetworkAvailable()
-            viewModel.updateNetworkStatus(currentNetworkStatus)
-
-            val networkStatusText = if (currentNetworkStatus) "Online" else "Offline"
-            textSyncStatus.text = "Estado: $networkStatusText | Pendientes: $count"
-        }
-
         viewModel.allInspections.observe(this) { inspections ->
-            historyAdapter.submitList(inspections)
+            // Mapeamos de Inspection a HistoricalInspection antes de pasarlo al adaptador
+            val historicalInspections = inspections.map { inspection ->
+                HistoricalInspection(
+                    hojaDeRuta = "N/A", // No existe en esta actividad, se puede poner N/A o un valor por defecto
+                    articulo = inspection.articulo,
+                    tipoCalidad = "N/A", // No existe, se puede poner N/A
+                    tipoDeFalla = inspection.tipoDeFalla, // Mapeamos el tipo de defecto
+                    metrosDeTela = inspection.metrosDeTela, // Mapeamos la cantidad de muestra como metros de tela
+                    fecha = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(inspection.fecha)
+                )
+            }
+            // Se usa el método updateList, que es el que existe en tu adaptador.
+            historyAdapter.updateList(historicalInspections)
         }
 
         viewModel.syncMessage.observe(this) { message ->
@@ -243,11 +225,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     private fun setupHistoryRecyclerView() {
-        historyAdapter = InspectionHistoryAdapter { inspection ->
-
-            Toast.makeText(this, "Detalles de: ${inspection.articleReference}", Toast.LENGTH_SHORT).show()
+        // Se corrigió la inicialización del adaptador para usar un constructor vacío
+        historyAdapter = InspectionHistoryAdapter(mutableListOf()) { inspection ->
+            Toast.makeText(this, "Detalles de: ${inspection.articulo}", Toast.LENGTH_SHORT).show()
         }
         recyclerViewHistory.layoutManager = LinearLayoutManager(this)
         recyclerViewHistory.adapter = historyAdapter
@@ -298,7 +279,6 @@ class MainActivity : AppCompatActivity() {
 
     @Throws(IOException::class)
     private fun createImageFile(): File {
-
         val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         return File.createTempFile(
@@ -306,28 +286,23 @@ class MainActivity : AppCompatActivity() {
             ".jpg",
             storageDir
         ).apply {
-
             currentPhotoPath = absolutePath
         }
     }
 
     private fun dispatchTakePictureIntent() {
         Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
-
             takePictureIntent.resolveActivity(packageManager)?.also {
-
                 val photoFile: File? = try {
                     createImageFile()
                 } catch (ex: IOException) {
-
                     Toast.makeText(this, "Error al crear archivo de imagen: ${ex.message}", Toast.LENGTH_LONG).show()
                     null
                 }
-
                 photoFile?.also {
                     val photoURI: Uri = FileProvider.getUriForFile(
                         this,
-                        "${applicationContext.packageName}.fileprovider", // Autoridad del FileProvider
+                        "${applicationContext.packageName}.fileprovider",
                         it
                     )
                     takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
@@ -348,7 +323,7 @@ class MainActivity : AppCompatActivity() {
                 marginEnd = resources.getDimensionPixelSize(R.dimen.image_preview_margin)
             }
             scaleType = ImageView.ScaleType.CENTER_CROP
-            setBackgroundResource(R.drawable.rounded_image_background) // Fondo redondeado para la imagen
+            setBackgroundResource(R.drawable.rounded_image_background)
         }
 
         Glide.with(this)
@@ -358,60 +333,6 @@ class MainActivity : AppCompatActivity() {
 
         imagePreviewContainer.addView(imageView)
         imagePreviewContainer.visibility = View.VISIBLE
-    }
-
-    private fun saveInspection() {
-        if (!validateForm()) {
-            Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        val inspectionDateStr = editInspectionDate.text.toString()
-        val inspectionTimeStr = editInspectionTime.text.toString()
-        val inspectorName = editInspectorName.text.toString().trim()
-        val orderNumber = editOrderNumber.text.toString().trim()
-        val articleReference = editArticleReference.text.toString().trim()
-        val supplier = editSupplier.text.toString().trim()
-        val color = editColor.text.toString().trim()
-        val totalLotQuantity = editTotalLotQuantity.text.toString().toIntOrNull() ?: 0
-        val sampleQuantity = editSampleQuantity.text.toString().toIntOrNull() ?: 0
-        val defectType = spinnerDefectType.text.toString().trim()
-        val otherDefectDescription = if (defectType == "Otro") editOtherDefectDescription.text.toString().trim() else null
-        val defectiveItemsQuantity = editDefectiveItemsQuantity.text.toString().toIntOrNull() ?: 0
-        val defectDescription = editDefectDescription.text.toString().trim()
-        val actionTaken = spinnerActionTaken.text.toString().trim()
-
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        val inspectionDate = dateFormat.parse(inspectionDateStr) ?: Date()
-
-        val uniqueId = UUID.randomUUID().toString()
-
-        val newInspection = Inspection(
-            inspectionDate = inspectionDate,
-            inspectionTime = inspectionTimeStr,
-            inspectorName = inspectorName,
-            orderNumber = orderNumber,
-            articleReference = articleReference,
-            supplier = supplier,
-            color = color,
-            totalLotQuantity = totalLotQuantity,
-            sampleQuantity = sampleQuantity,
-            defectType = defectType,
-            otherDefectDescription = otherDefectDescription,
-            defectiveItemsQuantity = defectiveItemsQuantity,
-            defectDescription = defectDescription,
-            actionTaken = actionTaken,
-            imagePaths = capturedImagePaths.toList(),
-            imageUrls = emptyList(),
-            isSynced = false,
-            uniqueId = uniqueId
-        )
-
-        lifecycleScope.launch {
-            viewModel.insertInspection(newInspection)
-            Toast.makeText(this@MainActivity, "Inspección guardada localmente.", Toast.LENGTH_SHORT).show()
-            clearForm()
-        }
     }
 
     private fun validateForm(): Boolean {
@@ -464,12 +385,12 @@ class MainActivity : AppCompatActivity() {
         editColor.setText("")
         editTotalLotQuantity.setText("")
         editSampleQuantity.setText("")
-        spinnerDefectType.setText("", false) // Limpiar texto y no seleccionar nada
+        spinnerDefectType.setText("", false)
         layoutOtherDefect.visibility = View.GONE
         editOtherDefectDescription.setText("")
         editDefectiveItemsQuantity.setText("")
         editDefectDescription.setText("")
-        spinnerActionTaken.setText("", false) // Limpiar texto y no seleccionar nada
+        spinnerActionTaken.setText("", false)
 
         imagePreviewContainer.removeAllViews()
         imagePreviewContainer.visibility = View.GONE
@@ -487,23 +408,5 @@ class MainActivity : AppCompatActivity() {
             editText.error = null
         }
         Toast.makeText(this, "Formulario limpiado.", Toast.LENGTH_SHORT).show()
-    }
-
-    @RequiresApi(Build.VERSION_CODES.M)
-    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
-    private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-    }
-
-    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
-    @RequiresApi(Build.VERSION_CODES.M)
-    override fun onResume() {
-        super.onResume()
-        viewModel.updateNetworkStatus(isNetworkAvailable())
     }
 }
