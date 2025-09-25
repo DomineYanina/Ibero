@@ -1,173 +1,231 @@
 package com.example.ibero
 
+import android.content.ContentValues.TAG
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import android.graphics.Color
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.ibero.data.AppDatabase
 import com.example.ibero.data.HistoricalInspection
+import com.example.ibero.data.HojaDeRuta
 import com.example.ibero.data.Inspection
-import com.example.ibero.data.toInspection
 import com.example.ibero.data.network.GoogleSheetsApi2
-import com.example.ibero.data.toHistoricalInspection
-import com.example.ibero.ui.InspectionHistoryAdapter
-import com.google.android.material.button.MaterialButton
+import com.example.ibero.ui.CurrentSessionInspectionAdapter
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 class ContinuarCargaActivity : AppCompatActivity() {
 
-    // Vistas de la interfaz de usuario
-    private lateinit var editHojaDeRuta: EditText
-    private lateinit var btnBuscar: MaterialButton
-    private lateinit var btnCancelar: MaterialButton
-    private lateinit var recyclerViewExistingRecords: RecyclerView
-    private lateinit var formAndRecordsContainer: LinearLayout
-    private lateinit var contenedorHojaRuta: LinearLayout
-    private lateinit var textExistingRecordsTitle: TextView
-    private lateinit var titulo: TextView
-    private lateinit var loadingOverlay: View
-    private lateinit var progressBar: View
-
-    // Elementos del formulario de ingreso
-    private lateinit var spinnerTipoCalidad: AutoCompleteTextView
-    private lateinit var layoutTipoFalla: TextInputLayout
-    private lateinit var spinnerTipoFalla: AutoCompleteTextView
-    private lateinit var editMetrosDeTela: EditText
-    private lateinit var btnIncorporar: MaterialButton
-    private lateinit var btnGuardarRegistro: MaterialButton
     private lateinit var viewModel: InspectionViewModel
-    private lateinit var historyAdapter: InspectionHistoryAdapter
-    private val TAG = "ContinuarCargaLog"
-
-    // Nuevas variables para los botones de limpieza
-    private lateinit var btnLimpiarCalidad: MaterialButton
-    private lateinit var btnLimpiarFalla: MaterialButton
-    private lateinit var btnLimpiarMetros: MaterialButton
-
-    // Nueva variable para el contenedor de tipo de falla
-    private lateinit var containerTipoFalla: LinearLayout
-
-    // Nuevas variables de estado para la lógica de los botones y la edición
-    private var hasRegisteredAnItem = false
+    private lateinit var database: AppDatabase
+    private lateinit var editHojaDeRuta: EditText
+    private lateinit var spinnerTipoCalidad: AutoCompleteTextView
+    private lateinit var layoutTipoDeFalla: TextInputLayout
+    private lateinit var spinnerTipoDeFalla: AutoCompleteTextView
+    private lateinit var editMetrosDeTela: EditText
+    private lateinit var btnGuardarRegistro: Button
+    private lateinit var btnIncorporar: Button
+    private lateinit var btnCancelar: Button
+    private lateinit var btnLimpiarCalidad: Button
+    private lateinit var btnLimpiarFalla: Button
+    private lateinit var btnLimpiarMetros: Button
     private var editingHistoricalInspection: HistoricalInspection? = null
+    private lateinit var btnBuscar: Button
+    private lateinit var containerTipoDeFalla: LinearLayout
+    private lateinit var recyclerViewCurrentSessionRecords: RecyclerView
+    private lateinit var currentSessionInspectionAdapter: CurrentSessionInspectionAdapter
+    private lateinit var textSessionTitle: TextView
+    private lateinit var progressBar: ProgressBar
+    private lateinit var loadingOverlay: View
+    private lateinit var formAndRecordsContainer: LinearLayout
+    private lateinit var progressBarFalla: ProgressBar
+    private var editingInspection: Inspection? = null
+    private var hasRegisteredAnItem = false
+    private lateinit var usuario: String
+    private lateinit var fecha: String
+    private lateinit var hojaDeRuta: String
+    private lateinit var tejeduria: String
+    private var telar: Int = 0
+    private var tintoreria: Int = 0
+    private lateinit var articulo: String
+    private var color: Int = 0
+    private var rolloDeUrdido: Int = 0
+    private lateinit var orden: String
+    private var cadena: Int = 0
+    private var anchoDeRolloParte1: Int = 0
+    private lateinit var esmerilado: String
+    private lateinit var ignifugo: String
+    private lateinit var impermeable: String
+    private lateinit var otro: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_continuar_carga)
 
-        initViews()
-        setupHistoryRecyclerView()
         val factory = InspectionViewModelFactory(application)
-        viewModel = ViewModelProvider(this, factory)[InspectionViewModel::class.java]
+        viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
+
+        database = AppDatabase.getDatabase(this)
+
+        usuario = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
+        hojaDeRuta = intent.getStringExtra("HOJA_DE_RUTA") ?: ""
+        tejeduria = intent.getStringExtra("TEJEDURIA") ?: ""
+        telar = intent.getIntExtra("TELAR", 0)
+        tintoreria = intent.getIntExtra("TINTORERIA", 0)
+        articulo = intent.getStringExtra("ARTICULO") ?: ""
+        color = intent.getIntExtra("COLOR", 0)
+        rolloDeUrdido = intent.getIntExtra("ROLLO_DE_URDIDO", 0)
+        orden = intent.getStringExtra("ORDEN") ?: ""
+        cadena = intent.getIntExtra("CADENA", 0)
+        anchoDeRolloParte1 = intent.getIntExtra("ANCHO_DE_ROLLO", 0)
+        esmerilado = intent.getStringExtra("ESMERILADO") ?: ""
+        ignifugo = intent.getStringExtra("IGNIFUGO") ?: ""
+        impermeable = intent.getStringExtra("IMPERMEABLE") ?: ""
+        otro = intent.getStringExtra("OTRO") ?: ""
+
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        fecha = dateFormat.format(Date())
+
+        // 1. Inicializar todas las vistas primero
+        initViews()
+        setupSpinners()
         setupListeners()
-        observeViewModel()
-        fetchFallaTypes()
+        setupCurrentSessionRecyclerView()
+        setupFieldWatchers()
+
+        // 2. Después de inicializar, puedes acceder a las propiedades
+        progressBar = findViewById(R.id.progress_bar)
+        loadingOverlay = findViewById(R.id.loading_overlay)
 
         btnIncorporar.isVisible = false
         btnGuardarRegistro.isVisible = false
-        formAndRecordsContainer.visibility = View.GONE
 
-        setupFieldWatchers()
-        chequearConexion()
+        textSessionTitle.text = "Registros ingresados para la hoja: $hojaDeRuta"
 
-        // Este observador es clave para que la lista se actualice automáticamente
-        viewModel.currentSessionInspections.observe(this) { inspections ->
-            Log.d(TAG, "Observando cambios en la lista. Se recibieron ${inspections.size} registros.")
-
-            // Convierte la lista de Inspection a HistoricalInspection antes de pasársela al adaptador
-            val historicalInspections = inspections.map { it.toHistoricalInspection() }
-
-            historyAdapter.updateList(historicalInspections.toMutableList())
-            if (inspections.isNotEmpty()) {
-                hasRegisteredAnItem = true
-                btnCancelar.text = "Ir a Inicio"
-                toggleFormButtons()
+        viewModel.isLoading.observe(this) { isLoading ->
+            if (isLoading) {
+                progressBar.visibility = View.VISIBLE
+                loadingOverlay.visibility = View.VISIBLE
+                btnIncorporar.isVisible = false
+                btnGuardarRegistro.isVisible = false
+                spinnerTipoCalidad.isVisible = false
+                spinnerTipoDeFalla.isVisible = false
+                editMetrosDeTela.isVisible = false
             } else {
-                hasRegisteredAnItem = false
-                btnCancelar.text = "Cancelar"
-                toggleFormButtons()
+                progressBar.visibility = View.GONE
+                loadingOverlay.visibility = View.GONE
+                spinnerTipoCalidad.isVisible = true
+                spinnerTipoDeFalla.isVisible = true
+                editMetrosDeTela.isVisible = true
+                toggleButtonsBasedOnInput()
             }
         }
-    }
 
-    private fun initViews() {
-        editHojaDeRuta = findViewById(R.id.edit_hoja_ruta_continuar)
-        btnBuscar = findViewById(R.id.btn_buscar_continuar)
-        btnCancelar = findViewById(R.id.btn_cancelar_continuar)
-        recyclerViewExistingRecords = findViewById(R.id.recycler_view_existing_records)
-        formAndRecordsContainer = findViewById(R.id.form_and_records_container)
-        textExistingRecordsTitle = findViewById(R.id.text_existing_records_title)
-        loadingOverlay = findViewById(R.id.loading_overlay)
-        progressBar = findViewById(R.id.progress_bar)
-        titulo = findViewById(R.id.titulo)
-
-        spinnerTipoCalidad = findViewById(R.id.spinner_tipo_calidad)
-        layoutTipoFalla = findViewById(R.id.layout_tipo_de_falla)
-        spinnerTipoFalla = findViewById(R.id.spinner_tipo_de_falla)
-        editMetrosDeTela = findViewById(R.id.edit_metros_de_tela)
-        btnIncorporar = findViewById(R.id.btn_incorporar)
-        btnGuardarRegistro = findViewById(R.id.btn_guardar_registro)
-        contenedorHojaRuta = findViewById(R.id.hoja_ruta_container)
-
-        btnLimpiarCalidad = findViewById(R.id.btn_limpiar_calidad)
-        btnLimpiarFalla = findViewById(R.id.btn_limpiar_falla)
-        btnLimpiarMetros = findViewById(R.id.btn_limpiar_metros)
-
-        containerTipoFalla = findViewById(R.id.container_tipo_falla)
-    }
-
-    private fun chequearConexion(){
-        if (!isNetworkAvailable(this@ContinuarCargaActivity)) {
-            editHojaDeRuta.isVisible = false
-            btnBuscar.isVisible = false
-            titulo.text = "Sin conexión a internet."
-            titulo.setTextColor(Color.BLACK)
-            titulo.setBackgroundColor(Color.RED)
-            btnBuscar.setBackgroundColor(Color.GRAY)
-        }
-    }
-
-    private fun setupHistoryRecyclerView() {
-        historyAdapter = InspectionHistoryAdapter(mutableListOf()) { historicalInspection ->
-            Log.d(TAG, "RecyclerView clic en item: ID único = ${historicalInspection.uniqueId}")
-            showEditConfirmationDialog(historicalInspection)
-        }
-        recyclerViewExistingRecords.layoutManager = LinearLayoutManager(this)
-        recyclerViewExistingRecords.adapter = historyAdapter
-    }
-
-    private fun observeViewModel() {
-        viewModel.isLoading.observe(this) { isLoading ->
-            setViewsEnabled(!isLoading)
-        }
         viewModel.syncMessage.observe(this) { message ->
             message?.let {
                 Toast.makeText(this, it, Toast.LENGTH_LONG).show()
                 viewModel.clearSyncMessage()
             }
         }
+
+        viewModel.currentSessionInspections.observe(this) { inspections ->
+            currentSessionInspectionAdapter.updateList(inspections)
+            if (inspections.isNotEmpty()) {
+                hasRegisteredAnItem = true
+                btnCancelar.text = "Ir a Inicio"
+            } else {
+                hasRegisteredAnItem = false
+                btnCancelar.text = "Cancelar"
+            }
+        }
+    }
+
+    private fun initViews() {
+        formAndRecordsContainer = findViewById(R.id.form_and_records_container)
+        editHojaDeRuta = findViewById(R.id.edit_hoja_ruta_continuar)
+        btnBuscar = findViewById(R.id.btn_buscar_continuar)
+        spinnerTipoCalidad = findViewById(R.id.spinner_tipo_calidad)
+        layoutTipoDeFalla = findViewById(R.id.layout_tipo_de_falla)
+        spinnerTipoDeFalla = findViewById(R.id.spinner_tipo_de_falla)
+        editMetrosDeTela = findViewById(R.id.edit_metros_de_tela)
+        btnGuardarRegistro = findViewById(R.id.btn_guardar_registro)
+        btnIncorporar = findViewById(R.id.btn_incorporar)
+        recyclerViewCurrentSessionRecords = findViewById(R.id.recycler_view_existing_records)
+        textSessionTitle = findViewById(R.id.text_existing_records_title)
+        btnCancelar = findViewById(R.id.btn_cancelar_continuar)
+
+        btnLimpiarCalidad = findViewById(R.id.btn_limpiar_calidad)
+        btnLimpiarFalla = findViewById(R.id.btn_limpiar_falla)
+        btnLimpiarMetros = findViewById(R.id.btn_limpiar_metros)
+
+        containerTipoDeFalla = findViewById(R.id.container_tipo_falla)
+
+        progressBarFalla = findViewById(R.id.progress_bar)
+    }
+
+    private fun setupSpinners() {
+        val tipoCalidadOptions = arrayOf("Primera", "Segunda")
+        val tipoCalidadAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, tipoCalidadOptions)
+        spinnerTipoCalidad.setAdapter(tipoCalidadAdapter)
+
+        fetchTiposDeFallaFromDb()
+
+        spinnerTipoCalidad.setOnItemClickListener { _, _, _, _ ->
+            val selectedQuality = spinnerTipoCalidad.text.toString()
+            if (selectedQuality == "Segunda") {
+                containerTipoDeFalla.visibility = View.VISIBLE
+            } else {
+                containerTipoDeFalla.visibility = View.GONE
+                spinnerTipoDeFalla.setText("", false)
+            }
+        }
+    }
+
+    private fun fetchTiposDeFallaFromDb() {
+        progressBarFalla.visibility = View.VISIBLE
+        spinnerTipoDeFalla.isEnabled = false
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            database.tipoDeFallaDao().getAllTiposDeFallas().collect { tiposDeFalla ->
+                withContext(Dispatchers.Main) {
+                    val fallas = tiposDeFalla
+                    val tipoDeFallaAdapter = ArrayAdapter(
+                        this@ContinuarCargaActivity,
+                        android.R.layout.simple_dropdown_item_1line,
+                        fallas
+                    )
+                    spinnerTipoDeFalla.setAdapter(tipoDeFallaAdapter)
+                    progressBarFalla.visibility = View.GONE
+                    spinnerTipoDeFalla.isEnabled = true
+                }
+            }
+        }
     }
 
     private fun setupListeners() {
+
         btnBuscar.setOnClickListener {
             val hojaDeRutaInput = editHojaDeRuta.text.toString().trim()
             if (hojaDeRutaInput.isNotEmpty()) {
@@ -178,36 +236,9 @@ class ContinuarCargaActivity : AppCompatActivity() {
             }
         }
 
-        btnCancelar.setOnClickListener {
-            if (hasRegisteredAnItem) {
-                // Si ya se ingresó al menos un registro, se sincronizan todos antes de salir.
-                finalizeAndSyncAll()
-            } else {
-                val loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
-                val homeIntent = Intent(this, HomeActivity::class.java)
-                homeIntent.putExtra("LOGGED_IN_USER", loggedInUser)
-                startActivity(homeIntent)
-                finish()
-            }
-        }
-
-        val calidadTypes = arrayOf("Primera", "Segunda")
-        val calidadAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, calidadTypes)
-        spinnerTipoCalidad.setAdapter(calidadAdapter)
-        spinnerTipoCalidad.setOnItemClickListener { parent, _, position, _ ->
-            val selectedCalidad = parent.getItemAtPosition(position).toString()
-            if (selectedCalidad == "Segunda") {
-                containerTipoFalla.visibility = View.VISIBLE
-            } else {
-                containerTipoFalla.visibility = View.GONE
-                spinnerTipoFalla.setText("", false)
-            }
-        }
-
         btnIncorporar.setOnClickListener {
-            Log.d(TAG, "Botón 'Incorporar' presionado. editingHistoricalInspection es nulo? ${editingHistoricalInspection == null}")
             if (validateForm()) {
-                if (editingHistoricalInspection != null) {
+                if (editingInspection != null) {
                     updateInspectionAndResetForm()
                 } else {
                     saveInspectionAndResetForm()
@@ -218,15 +249,27 @@ class ContinuarCargaActivity : AppCompatActivity() {
         }
 
         btnGuardarRegistro.setOnClickListener {
-            Log.d(TAG, "Botón 'Guardar Registro' presionado. editingHistoricalInspection es nulo? ${editingHistoricalInspection == null}")
             if (validateForm()) {
-                if (editingHistoricalInspection != null) {
+                if (editingInspection != null) {
                     updateInspectionAndFinalize()
                 } else {
                     saveInspectionAndFinalize()
                 }
             } else {
                 Toast.makeText(this, "Por favor, complete todos los campos obligatorios.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        btnCancelar.setOnClickListener {
+            if (hasRegisteredAnItem) {
+                // Al tocar "Ir a Inicio", se sincronizan todos los registros pendientes
+                finalizeAndSyncAll()
+            } else {
+                val loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
+                val homeIntent = Intent(this, HomeActivity::class.java)
+                homeIntent.putExtra("LOGGED_IN_USER", loggedInUser)
+                startActivity(homeIntent)
+                finish()
             }
         }
 
@@ -243,61 +286,6 @@ class ContinuarCargaActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupFieldWatchers() {
-        editMetrosDeTela.addTextChangedListener { toggleFormButtons() }
-        spinnerTipoCalidad.addTextChangedListener { toggleFormButtons() }
-        spinnerTipoFalla.addTextChangedListener { toggleFormButtons() }
-    }
-
-    private fun fetchFallaTypes() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val response = GoogleSheetsApi2.service.getTiposDeFallas()
-                if (response.isSuccessful) {
-                    val fallaTypes = response.body()?.data?.tiposDeFallas ?: emptyList()
-                    withContext(Dispatchers.Main) {
-                        val fallaAdapter = ArrayAdapter(this@ContinuarCargaActivity, android.R.layout.simple_dropdown_item_1line, fallaTypes)
-                        spinnerTipoFalla.setAdapter(fallaAdapter)
-                        Log.d(TAG, "Tipos de falla cargados: $fallaTypes")
-                    }
-                } else {
-                    Log.e(TAG, "Error al obtener tipos de falla: ${response.errorBody()?.string()}")
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@ContinuarCargaActivity, "Error al cargar tipos de falla desde la nube.", Toast.LENGTH_LONG).show()
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error de red al obtener tipos de falla: ${e.message}", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ContinuarCargaActivity, "Error de red: no se pudo cargar la lista de fallas.", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
-
-    private fun toggleFormButtons() {
-        if (formAndRecordsContainer.visibility == View.VISIBLE) {
-            val hayInput = spinnerTipoCalidad.text.isNotBlank() ||
-                    spinnerTipoFalla.text.isNotBlank() ||
-                    editMetrosDeTela.text.isNotBlank()
-
-            if (hayInput) {
-                btnCancelar.isVisible = false
-                btnIncorporar.isVisible = true
-                if(editingHistoricalInspection != null){
-                    btnGuardarRegistro.isVisible = false
-                    btnCancelar.isVisible = true
-                } else{
-                    btnGuardarRegistro.isVisible = true
-                }
-            } else {
-                btnCancelar.isVisible = true
-                btnIncorporar.isVisible = false
-                btnGuardarRegistro.isVisible = false
-            }
-        }
-    }
-
     private fun setViewsEnabled(enabled: Boolean) {
         editHojaDeRuta.isEnabled = enabled
         btnBuscar.isEnabled = enabled
@@ -305,7 +293,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
         btnIncorporar.isEnabled = enabled
         btnGuardarRegistro.isEnabled = enabled
         spinnerTipoCalidad.isEnabled = enabled
-        spinnerTipoFalla.isEnabled = enabled
+        spinnerTipoDeFalla.isEnabled = enabled
         editMetrosDeTela.isEnabled = enabled
         loadingOverlay.visibility = if (enabled) View.GONE else View.VISIBLE
         progressBar.visibility = if (enabled) View.GONE else View.VISIBLE
@@ -351,7 +339,9 @@ class ContinuarCargaActivity : AppCompatActivity() {
                         )
 
                         Log.d(TAG, "uniqueId del primer registro: ${firstRecord.uniqueId}")
-                        textExistingRecordsTitle.text = "Registros para la Hoja de Ruta: ${firstRecord.hojaDeRuta} - Artículo: ${firstRecord.articulo}"
+                        Log.d(TAG, "hojaDeRuta del primer registro: ${firstRecord.hojaDeRuta}")
+
+                        textSessionTitle.text = "Registros para la Hoja de Ruta: ${firstRecord.hojaDeRuta} - Artículo: ${firstRecord.articulo}"
                         formAndRecordsContainer.visibility = View.VISIBLE
                         // Ya no se llama al adaptador directamente aquí, el observador se encargará de esto
                         //Toast.makeText(this@ContinuarCargaActivity, "Hoja de Ruta encontrada. Historial cargado.", Toast.LENGTH_LONG).show()
@@ -375,37 +365,174 @@ class ContinuarCargaActivity : AppCompatActivity() {
         }
     }
 
-    private fun validateForm(): Boolean {
-        var isValid = true
-        val tipoCalidadInput = spinnerTipoCalidad.text.toString().trim()
-        val tipoFallaInput = spinnerTipoFalla.text.toString().trim()
-        val metrosDeTelaInput = editMetrosDeTela.text.toString().trim()
+    private fun toggleFormButtons() {
+        if (formAndRecordsContainer.visibility == View.VISIBLE) {
+            val hayInput = spinnerTipoCalidad.text.isNotBlank() ||
+                    spinnerTipoDeFalla.text.isNotBlank() ||
+                    editMetrosDeTela.text.isNotBlank()
 
-        if (tipoCalidadInput.isEmpty()) {
-            findViewById<TextInputLayout>(R.id.layout_tipo_calidad).error = "Tipo de Calidad es obligatorio"
-            isValid = false
+            if (hayInput) {
+                btnCancelar.isVisible = false
+                btnIncorporar.isVisible = true
+                if(editingHistoricalInspection != null){
+                    btnGuardarRegistro.isVisible = false
+                    btnCancelar.isVisible = true
+                } else{
+                    btnGuardarRegistro.isVisible = true
+                }
+            } else {
+                btnCancelar.isVisible = true
+                btnIncorporar.isVisible = false
+                btnGuardarRegistro.isVisible = false
+            }
+        }
+    }
+
+    private fun setupCurrentSessionRecyclerView() {
+        currentSessionInspectionAdapter = CurrentSessionInspectionAdapter(mutableListOf()) { inspection ->
+            showEditConfirmationDialog(inspection)
+        }
+        recyclerViewCurrentSessionRecords.layoutManager = LinearLayoutManager(this)
+        recyclerViewCurrentSessionRecords.adapter = currentSessionInspectionAdapter
+    }
+
+    private fun showEditConfirmationDialog(inspection: Inspection) {
+        AlertDialog.Builder(this)
+            .setTitle("Modificar Registro")
+            .setMessage("¿Deseas modificar el registro de ${inspection.tipoCalidad} con ${inspection.metrosDeTela} metros?")
+            .setPositiveButton("Sí") { dialog, _ ->
+                preloadFormForEditing(inspection)
+                dialog.dismiss()
+            }
+            .setNegativeButton("No") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun preloadFormForEditing(inspection: Inspection) {
+        editingInspection = inspection
+        spinnerTipoCalidad.setText(inspection.tipoCalidad, false)
+
+        if (inspection.tipoCalidad == "Segunda") {
+            containerTipoDeFalla.visibility = View.VISIBLE
+            spinnerTipoDeFalla.setText(inspection.tipoDeFalla, false)
         } else {
-            findViewById<TextInputLayout>(R.id.layout_tipo_calidad).error = null
+            containerTipoDeFalla.visibility = View.GONE
+            spinnerTipoDeFalla.setText("", false)
         }
-        if (tipoCalidadInput == "Segunda" && tipoFallaInput.isEmpty()) {
-            findViewById<TextInputLayout>(R.id.layout_tipo_de_falla).error = "Tipo de Falla es obligatorio"
-            isValid = false
-        } else if (tipoCalidadInput == "Primera") {
-            findViewById<TextInputLayout>(R.id.layout_tipo_de_falla).error = null
-        }
-        if (metrosDeTelaInput.isEmpty()) {
-            findViewById<TextInputLayout>(R.id.layout_metros_de_tela).error = "Metros de Tela es obligatorio"
-            isValid = false
+
+        editMetrosDeTela.setText(inspection.metrosDeTela.toString())
+
+        btnIncorporar.text = "Actualizar"
+        Toast.makeText(this, "Modifica los campos y toca Actualizar", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun setupFieldWatchers() {
+        editMetrosDeTela.addTextChangedListener { toggleButtonsBasedOnInput() }
+        spinnerTipoCalidad.addTextChangedListener { toggleButtonsBasedOnInput() }
+        spinnerTipoDeFalla.addTextChangedListener { toggleButtonsBasedOnInput() }
+    }
+
+    private fun toggleButtonsBasedOnInput() {
+        val hayInput = spinnerTipoCalidad.text.isNotBlank() ||
+                spinnerTipoDeFalla.text.isNotBlank() ||
+                editMetrosDeTela.text.isNotBlank()
+
+        if (hayInput) {
+            btnCancelar.isVisible = false
+            btnIncorporar.isVisible = true
+            if(editingInspection!=null){
+                btnGuardarRegistro.isVisible=false
+            } else{
+                btnGuardarRegistro.isVisible=true
+            }
         } else {
-            findViewById<TextInputLayout>(R.id.layout_metros_de_tela).error = null
+            btnCancelar.isVisible = true
+            btnIncorporar.isVisible = false
+            btnGuardarRegistro.isVisible = false
         }
-        return isValid
+    }
+
+    private fun saveInspectionAndResetForm() {
+        val inspection = createInspectionObject()
+        Log.e("HojaDeRuta", "Hoja de ruta por transmitir: ${inspection.hojaDeRuta}")
+        lifecycleScope.launch {
+            viewModel.insertInspection(inspection)
+            resetForm()
+        }
+    }
+
+    private fun updateInspectionAndResetForm() {
+        val inspectionToUpdate = editingInspection?.copy(
+            tipoCalidad = spinnerTipoCalidad.text.toString(),
+            tipoDeFalla = if (spinnerTipoCalidad.text.toString() == "Segunda") spinnerTipoDeFalla.text.toString() else null,
+            metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0,
+            isSynced = false // Asegurar que el registro se marque como no sincronizado para ser subido
+        )
+
+        if (inspectionToUpdate != null) {
+            lifecycleScope.launch {
+                viewModel.updateInspection(inspectionToUpdate)
+                // Se actualiza la lista de la sesión para reflejar el cambio en la UI
+                viewModel.addInspectionToSessionList(inspectionToUpdate)
+                resetForm()
+            }
+        } else {
+            Log.e("UpdateError", "No se pudo crear el objeto Inspection para actualizar. Objeto nulo.")
+        }
+    }
+
+    // CAMBIO: Se modifica la función para que solo guarde en la base de datos local antes de finalizar
+    private fun saveInspectionAndFinalize() {
+        val inspection = createInspectionObject()
+        lifecycleScope.launch {
+            viewModel.insertInspection(inspection)
+            finalizeAndSyncAll()
+        }
+    }
+
+    // CAMBIO: Se modifica la función para que solo actualice en la base de datos local antes de finalizar
+    private fun updateInspectionAndFinalize() {
+        val inspectionToUpdate = editingInspection?.copy(
+            tipoCalidad = spinnerTipoCalidad.text.toString(),
+            tipoDeFalla = if (spinnerTipoCalidad.text.toString() == "Segunda") spinnerTipoDeFalla.text.toString() else null,
+            metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0,
+            isSynced = false // Asegurar que el registro se marque como no sincronizado
+        )
+
+        if (inspectionToUpdate != null) {
+            lifecycleScope.launch {
+                viewModel.updateInspection(inspectionToUpdate)
+                finalizeAndSyncAll()
+            }
+        } else {
+            Log.e("UpdateError", "No se pudo crear el objeto Inspection para actualizar. Objeto nulo.")
+        }
+    }
+
+    // CAMBIO: Esta función se mantiene igual, ya que es la que se encarga de la sincronización
+    private fun finalizeAndSyncAll() {
+        lifecycleScope.launch {
+            val hojaDeRutaEntity = HojaDeRuta(nombre = hojaDeRuta)
+            database.hojaDeRutaDao().insert(hojaDeRutaEntity)
+
+            viewModel.performSync()
+            viewModel.clearCurrentSessionList()
+
+            // Navegar a HomeActivity después de la sincronización
+            val intent = Intent(this@ContinuarCargaActivity, HomeActivity::class.java)
+            intent.putExtra("LOGGED_IN_USER", usuario)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+            startActivity(intent)
+            finish()
+        }
     }
 
     private fun createInspectionObject(): Inspection {
         val sessionData = viewModel.getCurrentSessionData()
         val tipoCalidad = spinnerTipoCalidad.text.toString()
-        val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoFalla.text.toString() else null
+        val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoDeFalla.text.toString() else null
         val metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
 
         return sessionData.copy(
@@ -418,153 +545,61 @@ class ContinuarCargaActivity : AppCompatActivity() {
             imagePaths = emptyList(),
             imageUrls = emptyList()
         )
-    }
 
-    private fun saveInspectionAndResetForm() {
-        val inspection = createInspectionObject()
-        lifecycleScope.launch {
-            viewModel.insertInspection(inspection)
-            resetNewRecordForm()
-            hasRegisteredAnItem = true
-            btnCancelar.text = "Ir a Inicio"
-            toggleFormButtons()
-        }
-    }
+        Log.e("HojaDeRuta","Hoja de ruta: $hojaDeRuta")
 
-    private fun updateInspectionAndResetForm() {
-        val updatedInspection = createUpdatedInspectionObject()
-        lifecycleScope.launch {
-            viewModel.updateInspection(updatedInspection)
-            // Ya que el ViewModel actualiza la lista, no es necesario llamar a searchAndFetchRecords
-            // Solo se necesita resetear la UI
-            resetNewRecordForm()
-        }
-    }
-
-    private fun saveInspectionAndFinalize() {
-        val inspection = createInspectionObject()
-        lifecycleScope.launch {
-            viewModel.insertInspection(inspection)
-            finalizeAndSyncAll()
-        }
-    }
-
-    private fun updateInspectionAndFinalize() {
-        val updatedInspection = createUpdatedInspectionObject()
-        lifecycleScope.launch {
-            viewModel.updateInspection(updatedInspection)
-            finalizeAndSyncAll()
-        }
-    }
-
-    private fun finalizeAndSyncAll() {
-        lifecycleScope.launch {
-            viewModel.performSync()
-            viewModel.clearCurrentSessionList()
-
-            val userFromSession = viewModel.getCurrentSessionData().usuario
-            val intent = Intent(this@ContinuarCargaActivity, HomeActivity::class.java)
-            intent.putExtra("LOGGED_IN_USER", userFromSession)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-            startActivity(intent)
-            finish()
-        }
-    }
-
-    private fun showEditConfirmationDialog(historicalInspection: HistoricalInspection) {
-        Log.d(TAG, "showEditConfirmationDialog llamado para uniqueId: ${historicalInspection.uniqueId}")
-        AlertDialog.Builder(this)
-            .setTitle("Modificar Registro")
-            .setMessage("¿Deseas modificar este registro?")
-            .setPositiveButton("Sí") { dialog, _ ->
-                preloadFormForEditing(historicalInspection)
-                dialog.dismiss()
-            }
-            .setNegativeButton("No") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
-    }
-
-    private fun preloadFormForEditing(historicalInspection: HistoricalInspection) {
-        btnBuscar.isVisible = false
-        Log.d(TAG, "preloadFormForEditing: Estableciendo editingHistoricalInspection con uniqueId: ${historicalInspection.uniqueId}")
-        editingHistoricalInspection = historicalInspection
-
-        val inspection = historicalInspection.toInspection()
-
-        spinnerTipoCalidad.setText(inspection.tipoCalidad, false)
-        if (inspection.tipoCalidad == "Segunda") {
-            containerTipoFalla.visibility = View.VISIBLE
-            spinnerTipoFalla.setText(inspection.tipoDeFalla ?: "", false)
-        } else {
-            containerTipoFalla.visibility = View.GONE
-            spinnerTipoFalla.setText("", false)
-        }
-        editMetrosDeTela.setText(inspection.metrosDeTela.toString())
-
-        btnIncorporar.text = "Actualizar"
-        Toast.makeText(this, "Modifica los campos y toca Actualizar", Toast.LENGTH_SHORT).show()
-
-        toggleFormButtons()
-        btnGuardarRegistro.isVisible = false
-    }
-
-    private fun createUpdatedInspectionObject(): Inspection {
-        val sessionData = viewModel.getCurrentSessionData()
-        val tipoCalidad = spinnerTipoCalidad.text.toString()
-        val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoFalla.text.toString() else null
-        val metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
-        Log.d(TAG, "createUpdatedInspectionObject: Creando nuevo objeto de inspección con uniqueId: ${editingHistoricalInspection?.uniqueId}")
-
-        return sessionData.copy(
-            uniqueId = editingHistoricalInspection?.uniqueId ?: UUID.randomUUID().toString(),
-            tipoCalidad = tipoCalidad,
-            tipoDeFalla = tipoDeFalla,
-            metrosDeTela = metrosDeTela,
-            isSynced = false,
-        )
-    }
-
-    private fun resetNewRecordForm() {
-        Log.d(TAG, "resetNewRecordForm: Reseteando formulario y eliminando el registro en edición.")
-        resetForm()
-        editingHistoricalInspection = null
-        btnIncorporar.text = "Continuar"
-        btnGuardarRegistro.text = "Guardar Registro"
     }
 
     private fun resetForm(fieldToReset: String? = null) {
-        Log.d(TAG, "resetForm: Llamado con fieldToReset = $fieldToReset")
         when (fieldToReset) {
             "calidad" -> {
                 spinnerTipoCalidad.setText("", false)
-                containerTipoFalla.visibility = View.GONE
-                spinnerTipoFalla.setText("", false)
+                containerTipoDeFalla.visibility = View.GONE
+                spinnerTipoDeFalla.setText("", false)
             }
             "falla" -> {
-                spinnerTipoFalla.setText("", false)
+                spinnerTipoDeFalla.setText("", false)
             }
             "metros" -> {
                 editMetrosDeTela.text.clear()
             }
             else -> {
                 spinnerTipoCalidad.setText("", false)
-                containerTipoFalla.visibility = View.GONE
-                spinnerTipoFalla.setText("", false)
+                containerTipoDeFalla.visibility = View.GONE
+                spinnerTipoDeFalla.setText("", false)
                 editMetrosDeTela.text.clear()
             }
         }
-        editingHistoricalInspection = null
+
+        editingInspection = null
         btnIncorporar.text = "Continuar"
-        btnGuardarRegistro.text = "Guardar Registro"
-        toggleFormButtons()
+        toggleButtonsBasedOnInput()
     }
 
-    private fun clearAllFormsAndState() {
-        editHojaDeRuta.setText("")
-        formAndRecordsContainer.visibility = View.GONE
-        historyAdapter.updateList(emptyList())
-        resetNewRecordForm()
+    private fun validateForm(): Boolean {
+        var isValid = true
+
+        if (spinnerTipoCalidad.text.isNullOrBlank()) {
+            findViewById<TextInputLayout>(R.id.layout_tipo_calidad).error = "Tipo de Calidad es obligatorio"
+            isValid = false
+        } else {
+            findViewById<TextInputLayout>(R.id.layout_tipo_calidad).error = null
+        }
+
+        if (spinnerTipoCalidad.text.toString() == "Segunda" && spinnerTipoDeFalla.text.isNullOrBlank()) {
+            findViewById<TextInputLayout>(R.id.layout_tipo_de_falla).error = "Tipo de Falla es obligatorio"
+            isValid = false
+        } else if (spinnerTipoCalidad.text.toString() == "Primera") {
+            findViewById<TextInputLayout>(R.id.layout_tipo_de_falla).error = null
+        }
+
+        if (editMetrosDeTela.text.isNullOrBlank()) {
+            findViewById<TextInputLayout>(R.id.layout_metros_de_tela).error = "Metros de Tela es obligatorio"
+            isValid = false
+        } else {
+            findViewById<TextInputLayout>(R.id.layout_metros_de_tela).error = null
+        }
+
+        return isValid
     }
 }

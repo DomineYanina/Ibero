@@ -1,3 +1,5 @@
+// SegundoRegistroActivity.kt
+
 package com.example.ibero
 
 import android.content.Intent
@@ -358,6 +360,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         }
     }
 
+    // CAMBIO: Se modifica la función para que solo inserte el registro en la base de datos local
     private fun saveInspectionAndResetForm() {
         val inspection = createInspectionObject()
         lifecycleScope.launch {
@@ -366,11 +369,13 @@ class SegundoRegistroActivity : AppCompatActivity() {
         }
     }
 
+    // CAMBIO: Se modifica la función para que solo actualice el registro en la base de datos local
     private fun updateInspectionAndResetForm() {
         val inspectionToUpdate = editingInspection?.copy(
             tipoCalidad = spinnerTipoCalidad.text.toString(),
             tipoDeFalla = if (spinnerTipoCalidad.text.toString() == "Segunda") spinnerTipoDeFalla.text.toString() else null,
-            metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
+            metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0,
+            isSynced = false // Asegurar que el registro se marque como no sincronizado para ser subido
         )
 
         if (inspectionToUpdate != null) {
@@ -385,6 +390,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         }
     }
 
+    // CAMBIO: Se modifica la función para que solo guarde en la base de datos local antes de finalizar
     private fun saveInspectionAndFinalize() {
         val inspection = createInspectionObject()
         lifecycleScope.launch {
@@ -393,11 +399,13 @@ class SegundoRegistroActivity : AppCompatActivity() {
         }
     }
 
+    // CAMBIO: Se modifica la función para que solo actualice en la base de datos local antes de finalizar
     private fun updateInspectionAndFinalize() {
         val inspectionToUpdate = editingInspection?.copy(
             tipoCalidad = spinnerTipoCalidad.text.toString(),
             tipoDeFalla = if (spinnerTipoCalidad.text.toString() == "Segunda") spinnerTipoDeFalla.text.toString() else null,
-            metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0
+            metrosDeTela = editMetrosDeTela.text.toString().toDoubleOrNull() ?: 0.0,
+            isSynced = false // Asegurar que el registro se marque como no sincronizado
         )
 
         if (inspectionToUpdate != null) {
@@ -410,6 +418,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         }
     }
 
+    // CAMBIO: Esta función se mantiene igual, ya que es la que se encarga de la sincronización
     private fun finalizeAndSyncAll() {
         lifecycleScope.launch {
             val hojaDeRutaEntity = HojaDeRuta(nombre = hojaDeRuta)
@@ -427,6 +436,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         }
     }
 
+    // CAMBIO: Se añade un nuevo parámetro en el constructor del objeto Inspection para asegurar que no se sincronice
     private fun createInspectionObject(): Inspection {
         val tipoCalidad = spinnerTipoCalidad.text.toString()
         val tipoDeFalla = if (tipoCalidad == "Segunda") spinnerTipoDeFalla.text.toString() else null
@@ -458,7 +468,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
             tipoDeFalla = tipoDeFalla,
             metrosDeTela = metrosDeTela,
             uniqueId = uniqueId,
-            isSynced = false,
+            isSynced = false, // <--- CAMBIO CRUCIAL: Se establece el valor inicial de la sincronización en 'false'
             imagePaths = emptyList(),
             imageUrls = emptyList()
         )

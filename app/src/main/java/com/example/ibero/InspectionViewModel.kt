@@ -26,21 +26,16 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
 
     private val _isSyncing = MutableLiveData<Boolean>(false)
     val isSyncing: LiveData<Boolean> = _isSyncing
-
     private val repository: InspectionRepository
     private val tonalidadRepository: TonalidadRepository
     private val connectivityObserver = NetworkConnectivityObserver(application)
     val allInspections: LiveData<List<Inspection>>
-
     private val _syncMessage = MutableLiveData<String?>()
     val syncMessage: LiveData<String?> get() = _syncMessage
-
     private val _currentSessionInspections = MutableLiveData<MutableList<Inspection>>(mutableListOf())
     val currentSessionInspections: LiveData<MutableList<Inspection>> get() = _currentSessionInspections
-
     private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> get() = _isLoading
-
     private val syncMutex = Mutex()
     private var sessionData: Inspection? = null
 
@@ -133,6 +128,7 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
 
     fun insertInspection(inspection: Inspection) = viewModelScope.launch {
         repository.insert(inspection)
+        Log.e("HojaDeRutaTransmitida", "Hoja de ruta transmitida: ${inspection.hojaDeRuta}")
         addInspectionToSessionList(inspection)
     }
 
