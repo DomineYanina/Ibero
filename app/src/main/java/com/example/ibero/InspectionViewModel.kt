@@ -36,6 +36,9 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
     val currentSessionInspections: LiveData<MutableList<Inspection>> get() = _currentSessionInspections
     private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> get() = _isLoading
+
+    private val _isConnected = MutableLiveData<Boolean>(false)
+    val isConnected: LiveData<Boolean> = _isConnected
     private val syncMutex = Mutex()
     private var sessionData: Inspection? = null
 
@@ -49,7 +52,9 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             connectivityObserver.observe()
             connectivityObserver.connectionStatus.collectLatest { status ->
-                if (status is ConnectionStatus.Available) {
+                val connected = status is ConnectionStatus.Available
+                _isConnected.value = connected
+                if (connected) {
                     Log.d("SyncDebug", "Conexión a Internet detectada. Iniciando sincronización de registros pendientes...")
                     performSync()
                 }

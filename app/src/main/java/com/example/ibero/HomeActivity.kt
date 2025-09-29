@@ -33,11 +33,8 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var loggedInUser: String
     private lateinit var textSyncStatus: TextView
     private lateinit var btnSync: Button
-
-    // Inyecta tu DAO. Si no usas Hilt, inicialízalo manualmente en onCreate.
     private lateinit var inspectionDao: InspectionDao
     private lateinit var tonalidadDao: TonalidadDao
-
     private lateinit var inspectionViewModel: InspectionViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,7 +59,6 @@ class HomeActivity : AppCompatActivity() {
         loggedInUser = intent.getStringExtra("LOGGED_IN_USER") ?: "Usuario Desconocido"
         textWelcome.text = "Bienvenido, $loggedInUser"
 
-
         inspectionViewModel.isSyncing.observe(this, Observer { isSyncing ->
             val colorResId = if (isSyncing) {
                 R.color.magenta // Color para "Sincronizando..."
@@ -76,13 +72,14 @@ class HomeActivity : AppCompatActivity() {
                 // Se asigna el texto cuando la sincronización está en curso
                 btnSync.text = "Sincronizando..."
                 textSyncStatus.text = "Sincronizando..."
+                btnSync.isEnabled = false
             } else {
                 // Se asigna el texto cuando la sincronización ha terminado
-                btnSync.text = "Sincronizar"
+                btnSync.text = "Sin registros por sincronizar."
                 textSyncStatus.text = "Sin registros por sincronizar."
+                btnSync.isEnabled = false
             }
 
-            btnSync.isEnabled = !isSyncing
         })
 
         btnSync.setOnClickListener {
@@ -91,10 +88,28 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
-
-        // Configuración de los listeners de los botones
         setupButtonListeners()
-        chequearConexion()
+        //chequearConexion()
+        observeConnectionStatus()
+    }
+
+    private fun observeConnectionStatus() {
+        inspectionViewModel.isConnected.observe(this, Observer { isConnected ->
+            if (isConnected) {
+                Log.e("HomeActivity", "Volvió el Internet! :D")
+                // Habilitar y colorear
+                btnUpdateTonalidad.isEnabled = true
+                btnViewInspections.isEnabled = true
+                btnUpdateTonalidad.backgroundTintList = ColorStateList.valueOf("#2196F3".toColorInt())
+                btnViewInspections.backgroundTintList = ColorStateList.valueOf("#FF9800".toColorInt())
+            } else {
+                // Deshabilitar y colorear de gris
+                btnUpdateTonalidad.isEnabled = false
+                btnViewInspections.isEnabled = false
+                btnUpdateTonalidad.backgroundTintList = ColorStateList.valueOf(Color.GRAY) // Usamos backgroundTintList
+                btnViewInspections.backgroundTintList = ColorStateList.valueOf(Color.GRAY) // Usamos backgroundTintList
+            }
+        })
     }
 
     override fun onResume() {
@@ -127,30 +142,35 @@ class HomeActivity : AppCompatActivity() {
 
         btnSync.setOnClickListener {
             if(isNetworkAvailable(this@HomeActivity)){
+                //btnUpdateTonalidad.isEnabled = true
+                //btnViewInspections.isEnabled = true
+                //btnUpdateTonalidad.backgroundTintList = ColorStateList.valueOf("#2196F3".toColorInt())
+                //btnViewInspections.backgroundTintList = ColorStateList.valueOf("#FF9800".toColorInt())
                 inspectionViewModel.performSync()
-                textSyncStatus.text = "Sin registros a sincronizar."
-                btnSync.text = "Sin registros a sincronizar"
+                textSyncStatus.text = "Sin registros por sincronizar."
+                btnSync.text = "Sin registros por sincronizar"
                 btnSync.setTextColor(Color.BLACK)
                 btnSync.isEnabled = false
                 btnSync.setBackgroundColor(Color.GREEN)
             }
-            chequearConexion()
+            //chequearConexion()
         }
     }
 
-    private fun chequearConexion(){
+    /*private fun chequearConexion(){
         if (!isNetworkAvailable(this@HomeActivity)) {
             btnUpdateTonalidad.isEnabled = false
             btnViewInspections.isEnabled = false
             btnUpdateTonalidad.setBackgroundColor(Color.GRAY)
             btnViewInspections.setBackgroundColor(Color.GRAY)
         } else {
+            Log.e("HomeActivity", "Volvió el Internet! :D")
             btnUpdateTonalidad.isEnabled = true
             btnViewInspections.isEnabled = true
             btnUpdateTonalidad.backgroundTintList = ColorStateList.valueOf("#2196F3".toColorInt())
             btnViewInspections.backgroundTintList = ColorStateList.valueOf("#FF9800".toColorInt())
         }
-    }
+    }*/
 
     private fun checkSyncStatus() {
         lifecycleScope.launch(Dispatchers.IO) {
@@ -165,14 +185,20 @@ class HomeActivity : AppCompatActivity() {
                         textSyncStatus.text = "¡Cuidado! Hay $unsyncedCount registros pendientes. No cierres la app sin sincronizar."
                         btnSync.setBackgroundColor(Color.RED)
                         if (isNetworkAvailable(this@HomeActivity)) {
+                            //btnUpdateTonalidad.isEnabled = true
+                            //btnViewInspections.isEnabled = true
+                            //btnUpdateTonalidad.backgroundTintList = ColorStateList.valueOf("#2196F3".toColorInt())
+                            //btnViewInspections.backgroundTintList = ColorStateList.valueOf("#FF9800".toColorInt())
                             // Si hay conexión, muestra el botón de sincronizar
                             btnSync.setBackgroundColor(Color.MAGENTA)
                             btnSync.setTextColor(Color.WHITE)
                             btnSync.setText("Sincronizar")
+                            btnSync.isEnabled = true
                             return@withContext
                         } else {
                             // Si no hay conexión, muestra un mensaje de error
                             btnSync.setText("Sin conexión a internet")
+                            btnSync.isEnabled = false
                             return@withContext
                         }
                     } else {
@@ -180,7 +206,7 @@ class HomeActivity : AppCompatActivity() {
                         textSyncStatus.text = "Sin registros por sincronizar."
                         btnSync.setBackgroundColor(Color.GREEN)
                         btnSync.setTextColor(Color.BLACK)
-                        btnSync.setText("Nada por sincronizar")
+                        btnSync.setText("Sin registros por sincronizar.")
                         btnSync.isEnabled = false
                         return@withContext
                     }
