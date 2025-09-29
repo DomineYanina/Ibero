@@ -22,7 +22,7 @@ import kotlinx.coroutines.withContext
 import java.util.Date
 import com.example.ibero.data.Tonalidad
 
-class InspectionViewModel(application: Application) : AndroidViewModel(application) {
+class InspectionViewModel(application: Application, private val enableAutoSync: Boolean = true) : AndroidViewModel(application) {
 
     private val _isSyncing = MutableLiveData<Boolean>(false)
     val isSyncing: LiveData<Boolean> = _isSyncing
@@ -49,34 +49,39 @@ class InspectionViewModel(application: Application) : AndroidViewModel(applicati
         tonalidadRepository = TonalidadRepository(database.tonalidadDao())
         allInspections = repository.allInspections.asLiveData()
 
-        viewModelScope.launch {
-            connectivityObserver.observe()
-            connectivityObserver.connectionStatus.collectLatest { status ->
-                val connected = status is ConnectionStatus.Available
-                _isConnected.value = connected
-                if (connected) {
-                    Log.d("SyncDebug", "Conexión a Internet detectada. Iniciando sincronización de registros pendientes...")
-                    performSync()
+        if(enableAutoSync){
+            viewModelScope.launch {
+                connectivityObserver.observe()
+                connectivityObserver.connectionStatus.collectLatest { status ->
+                    val connected = status is ConnectionStatus.Available
+                    _isConnected.value = connected
+                    if (connected) {
+                        Log.d("SyncDebug", "Conexión a Internet detectada. Iniciando sincronización de registros pendientes...")
+                        performSync()
+                    }
                 }
             }
         }
 
-        viewModelScope.launch {
-            // Combina los flujos de inspecciones y tonalidades no sincronizadas
-            combine(
-                repository.unsyncedInspections,
-                tonalidadRepository.unsyncedTonalidades
-            ) { inspections, tonalidades ->
-                inspections.isNotEmpty() || tonalidades.isNotEmpty()
-            }
-                .distinctUntilChanged()
-                .collectLatest { hasUnsynced ->
-                    if (hasUnsynced) {
-                        Log.d("SyncDebug", "Nuevos registros pendientes detectados. Iniciando sincronización...")
-                        performSync()
-                    }
+        if(enableAutoSync){
+            viewModelScope.launch {
+                // Combina los flujos de inspecciones y tonalidades no sincronizadas
+                combine(
+                    repository.unsyncedInspections,
+                    tonalidadRepository.unsyncedTonalidades
+                ) { inspections, tonalidades ->
+                    inspections.isNotEmpty() || tonalidades.isNotEmpty()
                 }
+                    .distinctUntilChanged()
+                    .collectLatest { hasUnsynced ->
+                        if (hasUnsynced) {
+                            Log.d("SyncDebug", "Nuevos registros pendientes detectados. Iniciando sincronización...")
+                            performSync()
+                        }
+                    }
+            }
         }
+
     }
 
     fun initSessionData(

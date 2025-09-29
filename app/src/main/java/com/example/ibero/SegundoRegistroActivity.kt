@@ -92,7 +92,7 @@ class SegundoRegistroActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_segundo_registro)
 
-        val factory = InspectionViewModelFactory(application)
+        val factory = InspectionViewModelFactory(application, enableAutoSync = false)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
         apiService = GoogleSheetsApi2.service

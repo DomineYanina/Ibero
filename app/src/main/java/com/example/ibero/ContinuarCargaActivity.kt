@@ -84,7 +84,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_continuar_carga)
 
-        val factory = InspectionViewModelFactory(application)
+        val factory = InspectionViewModelFactory(application, enableAutoSync = false)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
         database = AppDatabase.getDatabase(this)
@@ -222,6 +222,7 @@ class ContinuarCargaActivity : AppCompatActivity() {
                 }
             }
         }
+
     }
 
     private fun setupListeners() {

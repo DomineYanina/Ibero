@@ -99,7 +99,7 @@ class MainActivity : AppCompatActivity() {
 
         initViews()
 
-        val factory = InspectionViewModelFactory(application)
+        val factory = InspectionViewModelFactory(application, enableAutoSync = true)
         viewModel = ViewModelProvider(this, factory).get(InspectionViewModel::class.java)
 
         setupSpinners()
