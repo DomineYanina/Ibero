@@ -36,7 +36,6 @@ class InspectionViewModel(application: Application, private val enableAutoSync: 
     val currentSessionInspections: LiveData<MutableList<Inspection>> get() = _currentSessionInspections
     private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> get() = _isLoading
-
     private val _isConnected = MutableLiveData<Boolean>(false)
     val isConnected: LiveData<Boolean> = _isConnected
     private val syncMutex = Mutex()

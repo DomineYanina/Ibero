@@ -74,10 +74,11 @@ class HomeActivity : AppCompatActivity() {
                 textSyncStatus.text = "Sincronizando..."
                 btnSync.isEnabled = false
             } else {
+                observeConnectionStatus()
                 // Se asigna el texto cuando la sincronización ha terminado
-                btnSync.text = "Sin registros por sincronizar."
+                /*btnSync.text = "Sin registros por sincronizar."
                 textSyncStatus.text = "Sin registros por sincronizar."
-                btnSync.isEnabled = false
+                btnSync.isEnabled = false*/
             }
 
         })
@@ -102,12 +103,16 @@ class HomeActivity : AppCompatActivity() {
                 btnViewInspections.isEnabled = true
                 btnUpdateTonalidad.backgroundTintList = ColorStateList.valueOf("#2196F3".toColorInt())
                 btnViewInspections.backgroundTintList = ColorStateList.valueOf("#FF9800".toColorInt())
+
             } else {
                 // Deshabilitar y colorear de gris
                 btnUpdateTonalidad.isEnabled = false
                 btnViewInspections.isEnabled = false
                 btnUpdateTonalidad.backgroundTintList = ColorStateList.valueOf(Color.GRAY) // Usamos backgroundTintList
                 btnViewInspections.backgroundTintList = ColorStateList.valueOf(Color.GRAY) // Usamos backgroundTintList
+                btnSync.text="Sin conexión a internet"
+                textSyncStatus.text="Sin conexión a internet"
+                btnSync.backgroundTintList = ColorStateList.valueOf(Color.GRAY) // Usamos backgroundTintList
             }
         })
     }
